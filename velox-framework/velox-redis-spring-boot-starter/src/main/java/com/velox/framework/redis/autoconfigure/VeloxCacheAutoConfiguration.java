@@ -4,6 +4,7 @@ import com.velox.framework.redis.api.manager.VeloxRedisCacheManager;
 import com.velox.framework.redis.core.DefaultRedisCacheCapabilityManager;
 import com.velox.framework.redis.noop.DisabledRedisCacheCapabilityManager;
 import com.velox.framework.redis.noop.DisabledRedisConnectionFactory;
+import com.velox.framework.redis.properties.VeloxCacheProperties;
 import com.velox.framework.redis.spi.cache.RedisCacheManagerRegistration;
 import com.velox.framework.redis.spi.cache.RedisCacheManagerRegistry;
 import com.velox.framework.redis.support.cache.DefaultRedisCacheManagerCreator;

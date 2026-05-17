@@ -1,6 +1,5 @@
 package com.velox.framework.web.autoconfigure;
 
-import com.velox.framework.config.VeloxProperties;
 import com.velox.framework.log.RequestLogInterceptor;
 import com.velox.framework.web.common.path.WebPathConstants;
 import com.velox.framework.web.common.servlet.WebFilterNames;
@@ -11,6 +10,7 @@ import com.velox.framework.web.core.servlet.DefaultRequestTimeZoneFilterRegistra
 import com.velox.framework.web.core.servlet.DefaultTraceIdFilterRegistrationCustomizer;
 import com.velox.framework.web.core.timezone.DefaultRequestTimeZoneResolver;
 import com.velox.framework.web.core.tracing.DefaultTraceIdResolver;
+import com.velox.framework.web.properties.VeloxProperties;
 import com.velox.framework.web.properties.VeloxWebProperties;
 import com.velox.framework.web.spi.logging.RequestLogHandler;
 import com.velox.framework.web.spi.mvc.VeloxWebMvcConfigurer;

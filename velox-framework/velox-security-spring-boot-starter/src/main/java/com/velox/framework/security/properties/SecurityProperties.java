@@ -1,12 +1,13 @@
 package com.velox.framework.security.properties;
 
 import com.velox.framework.security.common.constant.SecurityConstants;
+import com.velox.framework.security.common.prefix.SecurityPropertyPrefixes;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 安全相关配置
  */
-@ConfigurationProperties(prefix = SecurityConstants.CONFIG_PREFIX)
+@ConfigurationProperties(prefix = SecurityPropertyPrefixes.SECURITY)
 public class SecurityProperties {
 
     private boolean swaggerPublicEnabled = false;

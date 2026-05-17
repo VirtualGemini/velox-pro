@@ -2,12 +2,12 @@ package com.velox.framework.security.autoconfigure;
 
 import com.velox.framework.security.api.authorization.SecurityAuthorizationService;
 import com.velox.framework.security.api.authorization.SecurityPermissionProvider;
-import com.velox.framework.config.SecurityProperties;
 import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.framework.security.api.token.SecurityTokenRuntime;
 import com.velox.framework.security.api.token.SecurityTokenProvider;
 import com.velox.framework.security.common.message.SecurityCommonMessages;
 import com.velox.framework.security.exception.SecurityConfigException;
+import com.velox.framework.security.properties.SecurityProperties;
 import com.velox.framework.security.support.authorization.DefaultSecurityAuthorizationService;
 import com.velox.framework.security.support.aspect.SecurityAuthorizationAspect;
 import org.springframework.beans.factory.ObjectProvider;

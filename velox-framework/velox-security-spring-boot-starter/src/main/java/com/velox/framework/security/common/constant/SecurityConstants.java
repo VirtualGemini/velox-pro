@@ -2,7 +2,6 @@ package com.velox.framework.security.common.constant;
 
 public final class SecurityConstants {
 
-    public static final String CONFIG_PREFIX = "velox.security";
     public static final String EMPTY = "";
 
     public static final String DEFAULT_PASSWORD_ALGORITHM = "bcrypt";

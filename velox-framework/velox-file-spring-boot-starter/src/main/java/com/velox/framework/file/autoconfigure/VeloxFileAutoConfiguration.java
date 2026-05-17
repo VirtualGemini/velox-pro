@@ -2,6 +2,7 @@ package com.velox.framework.file.autoconfigure;
 
 import com.velox.framework.file.api.client.FileClientFactory;
 import com.velox.framework.file.api.diagnostics.FileFailureReasonResolver;
+import com.velox.framework.file.common.prefix.FilePropertyPrefixes;
 import com.velox.framework.file.common.storage.FileStorageCodes;
 import com.velox.framework.file.core.client.DefaultFileClientManager;
 import com.velox.framework.file.noop.DisabledFileClientManager;
@@ -40,7 +41,7 @@ public class VeloxFileAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(
-            prefix = VeloxFileProperties.PREFIX,
+            prefix = FilePropertyPrefixes.FILE,
             name = VeloxFileProperties.ENABLED_KEY,
             havingValue = VeloxFileProperties.ENABLED_TRUE,
             matchIfMissing = true
@@ -52,7 +53,7 @@ public class VeloxFileAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(
-            prefix = VeloxFileProperties.PREFIX,
+            prefix = FilePropertyPrefixes.FILE,
             name = VeloxFileProperties.ENABLED_KEY,
             havingValue = VeloxFileProperties.ENABLED_FALSE
     )

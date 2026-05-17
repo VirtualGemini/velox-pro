@@ -2,9 +2,11 @@ package com.velox.framework.redis.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.velox.framework.redis.api.manager.VeloxRedisManager;
+import com.velox.framework.redis.common.prefix.RedisPropertyPrefixes;
 import com.velox.framework.redis.core.DefaultRedisCapabilityManager;
 import com.velox.framework.redis.noop.DisabledRedisCapabilityManager;
 import com.velox.framework.redis.noop.DisabledRedisConnectionFactory;
+import com.velox.framework.redis.properties.VeloxRedisProperties;
 import com.velox.framework.redis.spi.redis.RedisTemplateRegistration;
 import com.velox.framework.redis.spi.redis.RedisTemplateRegistry;
 import com.velox.framework.redis.support.redis.DefaultRedisTemplateCreator;
@@ -29,7 +31,7 @@ public class VeloxRedisAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(RedisConnectionFactory.class)
     @ConditionalOnProperty(
-            prefix = VeloxRedisProperties.PREFIX,
+            prefix = RedisPropertyPrefixes.REDIS,
             name = VeloxRedisProperties.ENABLED_KEY,
             havingValue = VeloxRedisProperties.ENABLED_FALSE
     )
@@ -61,7 +63,7 @@ public class VeloxRedisAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(value = VeloxRedisManager.class, name = "redisTemplate")
     @ConditionalOnProperty(
-            prefix = VeloxRedisProperties.PREFIX,
+            prefix = RedisPropertyPrefixes.REDIS,
             name = VeloxRedisProperties.ENABLED_KEY,
             havingValue = VeloxRedisProperties.ENABLED_TRUE,
             matchIfMissing = true
@@ -82,7 +84,7 @@ public class VeloxRedisAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(value = VeloxRedisManager.class, name = "redisTemplate")
     @ConditionalOnProperty(
-            prefix = VeloxRedisProperties.PREFIX,
+            prefix = RedisPropertyPrefixes.REDIS,
             name = VeloxRedisProperties.ENABLED_KEY,
             havingValue = VeloxRedisProperties.ENABLED_FALSE
     )

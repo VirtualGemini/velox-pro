@@ -1,7 +1,7 @@
 package com.velox.framework.redis.core;
 
 import com.velox.framework.redis.api.manager.VeloxRedisCacheManager;
-import com.velox.framework.redis.autoconfigure.VeloxCacheProperties;
+import com.velox.framework.redis.properties.VeloxCacheProperties;
 import com.velox.framework.redis.spi.cache.RedisCacheManagerRegistration;
 import com.velox.framework.redis.spi.cache.RedisCacheManagerRegistry;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;

@@ -1,5 +1,6 @@
 package com.velox.framework.persistence.properties;
 
+import com.velox.framework.persistence.common.prefix.PersistencePropertyPrefixes;
 import com.velox.framework.persistence.common.message.PersistenceCommonMessages;
 import com.velox.framework.persistence.exception.PersistenceConfigException;
 import com.velox.framework.persistence.spi.dialect.DatabaseDialect;
@@ -14,7 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @Validated
-@ConfigurationProperties(prefix = "velox.datasource")
+@ConfigurationProperties(prefix = PersistencePropertyPrefixes.DATASOURCE)
 public class VeloxPersistenceProperties {
 
     private static final String DEFAULT_DIALECT = "";

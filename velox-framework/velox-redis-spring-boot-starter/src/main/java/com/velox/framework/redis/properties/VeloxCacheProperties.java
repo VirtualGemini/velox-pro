@@ -1,14 +1,15 @@
-package com.velox.framework.redis.autoconfigure;
+package com.velox.framework.redis.properties;
 
+import com.velox.framework.redis.autoconfigure.RedisAutoConfigurationConstants;
+import com.velox.framework.redis.common.prefix.RedisPropertyPrefixes;
 import com.velox.framework.redis.common.type.RedisDisabledStrategyType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
-@ConfigurationProperties(VeloxCacheProperties.PREFIX)
+@ConfigurationProperties(RedisPropertyPrefixes.REDIS_CACHE)
 public class VeloxCacheProperties {
 
-    public static final String PREFIX = "velox.redis.cache";
     public static final String ENABLED_KEY = "enabled";
     public static final String ENABLED_TRUE = "true";
     public static final String ENABLED_FALSE = "false";

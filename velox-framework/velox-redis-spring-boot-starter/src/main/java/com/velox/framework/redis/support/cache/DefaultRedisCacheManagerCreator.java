@@ -2,9 +2,9 @@ package com.velox.framework.redis.support.cache;
 
 import cn.hutool.core.util.StrUtil;
 import com.velox.framework.redis.api.manager.VeloxRedisCacheManager;
-import com.velox.framework.redis.autoconfigure.VeloxCacheProperties;
 import com.velox.framework.redis.common.message.RedisCommonMessages;
 import com.velox.framework.redis.exception.VeloxRedisException;
+import com.velox.framework.redis.properties.VeloxCacheProperties;
 import com.velox.framework.redis.spi.cache.RedisCacheManagerCreator;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.cache.BatchStrategies;

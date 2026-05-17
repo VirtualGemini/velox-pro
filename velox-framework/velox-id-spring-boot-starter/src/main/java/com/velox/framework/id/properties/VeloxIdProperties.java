@@ -1,16 +1,15 @@
 package com.velox.framework.id.properties;
 
 import cn.hutool.core.lang.Snowflake;
+import com.velox.framework.id.common.prefix.IdPropertyPrefixes;
 import com.velox.framework.id.common.message.IdGeneratorCommonMessages;
 import com.velox.framework.id.common.type.IdDatabaseInitModes;
 import com.velox.framework.id.common.type.IdGeneratorStrategies;
 import com.velox.framework.id.exception.VeloxIdGeneratorException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = VeloxIdProperties.PREFIX)
+@ConfigurationProperties(prefix = IdPropertyPrefixes.ID)
 public class VeloxIdProperties {
-
-    public static final String PREFIX = "velox.id";
     /**
      * Top-level snowflake worker id.
      */

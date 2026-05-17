@@ -1,11 +1,11 @@
 package com.velox.framework.file.properties;
 
+import com.velox.framework.file.common.prefix.FilePropertyPrefixes;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = VeloxFileProperties.PREFIX)
+@ConfigurationProperties(prefix = FilePropertyPrefixes.FILE)
 public class VeloxFileProperties {
 
-    public static final String PREFIX = "velox.file";
     public static final String ENABLED_KEY = "enabled";
     public static final String ENABLED_TRUE = "true";
     public static final String ENABLED_FALSE = "false";

@@ -1,11 +1,12 @@
-package com.velox.framework.redis.autoconfigure;
+package com.velox.framework.redis.properties;
 
+import com.velox.framework.redis.autoconfigure.RedisAutoConfigurationConstants;
+import com.velox.framework.redis.common.prefix.RedisPropertyPrefixes;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = VeloxRedisProperties.PREFIX)
+@ConfigurationProperties(prefix = RedisPropertyPrefixes.REDIS)
 public class VeloxRedisProperties {
 
-    public static final String PREFIX = "velox.redis";
     public static final String ENABLED_KEY = "enabled";
     public static final String ENABLED_TRUE = "true";
     public static final String ENABLED_FALSE = "false";
