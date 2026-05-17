@@ -1,9 +1,9 @@
 package com.velox.module.system.permission.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.velox.module.system.common.constants.SystemRoleCode;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.domain.model.Menu;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.RoleMenuPermission;
@@ -37,17 +37,20 @@ public class PermissionServiceImpl implements PermissionService {
     private final RoleMenuPermissionMapper roleMenuPermissionMapper;
     private final UserRoleMapper userRoleMapper;
     private final BusinessIdGenerator businessIdGenerator;
+    private final SecuritySessionService securitySessionService;
 
     public PermissionServiceImpl(RoleMapper roleMapper,
                                  MenuMapper menuMapper,
                                  RoleMenuPermissionMapper roleMenuPermissionMapper,
                                  UserRoleMapper userRoleMapper,
-                                 BusinessIdGenerator businessIdGenerator) {
+                                 BusinessIdGenerator businessIdGenerator,
+                                 SecuritySessionService securitySessionService) {
         this.roleMapper = roleMapper;
         this.menuMapper = menuMapper;
         this.roleMenuPermissionMapper = roleMenuPermissionMapper;
         this.userRoleMapper = userRoleMapper;
         this.businessIdGenerator = businessIdGenerator;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
@@ -329,7 +332,8 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     private String currentOperator() {
-        return StpUtil.isLogin() ? String.valueOf(StpUtil.getLoginIdDefaultNull()) : "system";
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        return loginId == null || loginId.isBlank() ? "system" : loginId;
     }
 
     private String normalizeId(String id) {

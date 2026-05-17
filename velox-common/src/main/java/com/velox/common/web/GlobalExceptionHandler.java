@@ -1,13 +1,12 @@
 package com.velox.common.web;
 
-import cn.dev33.satoken.exception.NotPermissionException;
-import cn.dev33.satoken.exception.NotRoleException;
-import cn.dev33.satoken.exception.SaTokenException;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
 import com.velox.common.exception.ClientErrorCode;
 import com.velox.common.exception.InternalErrorCode;
 import com.velox.common.result.Result;
+import com.velox.framework.security.exception.SecurityAuthenticationException;
+import com.velox.framework.security.exception.SecurityAuthorizationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,16 +30,16 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(SaTokenException.class)
+    @ExceptionHandler(SecurityAuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public Result<Void> handleSaTokenException(SaTokenException exception, HttpServletRequest request) {
+    public Result<Void> handleSecurityAuthenticationException(SecurityAuthenticationException exception, HttpServletRequest request) {
         log.warn("Unauthorized [{}] {}: {}", request.getMethod(), request.getRequestURI(), exception.getMessage());
         return Result.fail(ClientErrorCode.UNAUTHORIZED);
     }
 
-    @ExceptionHandler({NotPermissionException.class, NotRoleException.class})
+    @ExceptionHandler(SecurityAuthorizationException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public Result<Void> handleForbiddenException(SaTokenException exception, HttpServletRequest request) {
+    public Result<Void> handleForbiddenException(SecurityAuthorizationException exception, HttpServletRequest request) {
         log.warn("Forbidden [{}] {}: {}", request.getMethod(), request.getRequestURI(), exception.getMessage());
         return Result.fail(ClientErrorCode.FORBIDDEN);
     }

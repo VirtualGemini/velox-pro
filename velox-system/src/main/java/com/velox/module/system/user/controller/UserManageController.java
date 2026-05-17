@@ -1,7 +1,8 @@
 package com.velox.module.system.user.controller;
 
-import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.velox.common.result.Result;
+import com.velox.framework.security.api.annotation.RequirePermission;
+import com.velox.module.system.id.web.SystemFrontendIdCodecSupport;
 import com.velox.module.system.user.dto.UserListItemDTO;
 import com.velox.module.system.user.dto.UserQuery;
 import com.velox.module.system.user.dto.UserSaveCommand;
@@ -26,34 +27,39 @@ import com.velox.common.result.PageResult;
 public class UserManageController {
 
     private final UserManageService userManageService;
+    private final SystemFrontendIdCodecSupport frontendIdCodecSupport;
 
-    public UserManageController(UserManageService userManageService) {
+    public UserManageController(
+            UserManageService userManageService,
+            SystemFrontendIdCodecSupport frontendIdCodecSupport
+    ) {
         this.userManageService = userManageService;
+        this.frontendIdCodecSupport = frontendIdCodecSupport;
     }
 
     @Operation(summary = "获取用户列表")
-    @SaCheckPermission("system:user:query")
+    @RequirePermission("system:user:query")
     @GetMapping("/list")
     public Result<PageResult<UserListItemDTO>> list(UserQuery query) {
         return Result.ok(userManageService.list(query));
     }
 
     @Operation(summary = "新增用户")
-    @SaCheckPermission("system:user:create")
+    @RequirePermission("system:user:create")
     @PostMapping
     public Result<String> create(@Valid @RequestBody UserSaveCommand command) {
-        return Result.ok(userManageService.create(command));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifier(userManageService.create(command)));
     }
 
     @Operation(summary = "编辑用户")
-    @SaCheckPermission("system:user:update")
+    @RequirePermission("system:user:update")
     @PutMapping("/{userId}")
     public Result<Boolean> update(@PathVariable("userId") String userId, @Valid @RequestBody UserSaveCommand command) {
         return Result.ok(userManageService.update(userId, command));
     }
 
     @Operation(summary = "删除用户")
-    @SaCheckPermission("system:user:delete")
+    @RequirePermission("system:user:delete")
     @DeleteMapping("/{userId}")
     public Result<Boolean> delete(@PathVariable("userId") String userId) {
         return Result.ok(userManageService.delete(userId));

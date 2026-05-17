@@ -1,6 +1,5 @@
 package com.velox.module.system.menu.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.velox.module.system.common.constants.SystemRoleCode;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
@@ -13,6 +12,7 @@ import com.velox.module.system.persistence.RoleMenuPermissionMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.support.MenuQuerySupport;
 import com.velox.framework.id.BusinessIdGenerator;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.framework.web.RequestDateTimeFormatter;
 import com.velox.module.system.permission.service.PermissionService;
 import com.velox.module.system.menu.dto.AuthItemDTO;
@@ -49,6 +49,7 @@ public class MenuServiceImpl implements MenuService {
     private final UserMapper userMapper;
     private final PermissionService permissionService;
     private final BusinessIdGenerator businessIdGenerator;
+    private final SecuritySessionService securitySessionService;
 
     public MenuServiceImpl(
             MenuMapper menuMapper,
@@ -56,7 +57,8 @@ public class MenuServiceImpl implements MenuService {
             RoleMenuPermissionMapper roleMenuPermissionMapper,
             UserMapper userMapper,
             PermissionService permissionService,
-            BusinessIdGenerator businessIdGenerator
+            BusinessIdGenerator businessIdGenerator,
+            SecuritySessionService securitySessionService
     ) {
         this.menuMapper = menuMapper;
         this.roleMapper = roleMapper;
@@ -64,6 +66,7 @@ public class MenuServiceImpl implements MenuService {
         this.userMapper = userMapper;
         this.permissionService = permissionService;
         this.businessIdGenerator = businessIdGenerator;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
@@ -244,7 +247,7 @@ public class MenuServiceImpl implements MenuService {
     }
 
     private Set<String> getCurrentUserPermittedMenuIds() {
-        String userId = StpUtil.getLoginIdAsString();
+        String userId = securitySessionService.requireCurrentLoginId();
         User user = userMapper.selectById(userId);
         if (user == null) {
             return Set.of();
@@ -447,6 +450,7 @@ public class MenuServiceImpl implements MenuService {
     }
 
     private String currentOperator() {
-        return StpUtil.isLogin() ? String.valueOf(StpUtil.getLoginIdDefaultNull()) : "system";
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        return StringUtils.hasText(loginId) ? loginId : "system";
     }
 }

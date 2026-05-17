@@ -1,1 +1,2 @@
 com.velox.framework.security.autoconfigure.VeloxSecurityAutoConfiguration
+com.velox.framework.security.satoken.autoconfigure.VeloxSecuritySaTokenAutoConfiguration

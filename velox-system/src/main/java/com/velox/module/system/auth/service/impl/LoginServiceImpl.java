@@ -1,6 +1,5 @@
 package com.velox.module.system.auth.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.velox.module.system.common.enums.RoleTypeEnum;
@@ -15,6 +14,7 @@ import com.velox.module.system.domain.model.User;
 import com.velox.module.system.domain.model.UserRole;
 import com.velox.framework.config.SecurityProperties;
 import com.velox.framework.id.BusinessIdGenerator;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.persistence.ProfileMapper;
 import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
@@ -50,6 +50,7 @@ public class LoginServiceImpl implements LoginService {
     private final ObjectProvider<EmailBuilder> emailBuilderProvider;
     private final VerificationCodeStore verificationCodeStore;
     private final ActiveUserStatusService activeUserStatusService;
+    private final SecuritySessionService securitySessionService;
 
     public LoginServiceImpl(UserMapper userMapper,
                             ProfileMapper profileMapper,
@@ -60,7 +61,8 @@ public class LoginServiceImpl implements LoginService {
                             BusinessIdGenerator businessIdGenerator,
                             ObjectProvider<EmailBuilder> emailBuilderProvider,
                             VerificationCodeStore verificationCodeStore,
-                            ActiveUserStatusService activeUserStatusService) {
+                            ActiveUserStatusService activeUserStatusService,
+                            SecuritySessionService securitySessionService) {
         this.userMapper = userMapper;
         this.profileMapper = profileMapper;
         this.roleMapper = roleMapper;
@@ -71,6 +73,7 @@ public class LoginServiceImpl implements LoginService {
         this.emailBuilderProvider = emailBuilderProvider;
         this.verificationCodeStore = verificationCodeStore;
         this.activeUserStatusService = activeUserStatusService;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
@@ -147,9 +150,8 @@ public class LoginServiceImpl implements LoginService {
         resetLoginFailCount(user);
         upgradePasswordIfNeeded(user, password);
 
-        StpUtil.login(user.getId());
+        String token = securitySessionService.login(user.getId());
         activeUserStatusService.recordLogin(user.getId());
-        String token = StpUtil.getTokenValue();
 
         return new TokenDTO(token, null);
     }
@@ -301,8 +303,8 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public void logout() {
-        String userId = StpUtil.isLogin() ? StpUtil.getLoginIdAsString() : null;
-        StpUtil.logout();
+        String userId = securitySessionService.currentLoginIdOrNull();
+        securitySessionService.logout();
         activeUserStatusService.recordLogout(userId);
     }
 

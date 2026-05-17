@@ -1,11 +1,15 @@
 package com.velox.module.system.auth.config;
 
-import cn.dev33.satoken.interceptor.SaInterceptor;
-import cn.dev33.satoken.stp.StpUtil;
-import com.velox.framework.config.VeloxProperties;
 import com.velox.framework.config.SecurityProperties;
+import com.velox.framework.config.VeloxProperties;
+import com.velox.framework.security.api.authorization.SecurityAuthorizationService;
+import com.velox.framework.web.api.path.ApiPathPrefixes;
 import com.velox.module.system.auth.interceptor.ActiveUserHeartbeatInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
+import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -13,18 +17,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
-public class SaTokenConfig implements WebMvcConfigurer {
+public class SecurityWebMvcConfig implements WebMvcConfigurer {
 
     private final SecurityProperties securityProperties;
     private final VeloxProperties veloxProperties;
     private final ActiveUserHeartbeatInterceptor activeUserHeartbeatInterceptor;
+    private final SecurityAuthorizationService securityAuthorizationService;
 
-    public SaTokenConfig(SecurityProperties securityProperties,
-                         VeloxProperties veloxProperties,
-                         ActiveUserHeartbeatInterceptor activeUserHeartbeatInterceptor) {
+    public SecurityWebMvcConfig(SecurityProperties securityProperties,
+                                VeloxProperties veloxProperties,
+                                ActiveUserHeartbeatInterceptor activeUserHeartbeatInterceptor,
+                                SecurityAuthorizationService securityAuthorizationService) {
         this.securityProperties = securityProperties;
         this.veloxProperties = veloxProperties;
         this.activeUserHeartbeatInterceptor = activeUserHeartbeatInterceptor;
+        this.securityAuthorizationService = securityAuthorizationService;
     }
 
     @Override
@@ -46,9 +53,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
             excludes.add("/webjars/**");
         }
 
-        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
-            .addPathPatterns("/**")
-            .excludePathPatterns(excludes);
+        registry.addInterceptor(new LoginCheckInterceptor(securityAuthorizationService))
+                .addPathPatterns("/**")
+                .excludePathPatterns(excludes);
 
         registry.addInterceptor(activeUserHeartbeatInterceptor)
                 .addPathPatterns("/**")
@@ -57,7 +64,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
 
     private void addAuthExclude(List<String> excludes, String authSuffix) {
         excludes.add("/auth" + authSuffix);
-        String apiPrefix = normalizePrefix(veloxProperties.getApiPrefix());
+        String apiPrefix = ApiPathPrefixes.normalize(veloxProperties.getApiPrefix());
         if (!apiPrefix.isEmpty()) {
             excludes.add(apiPrefix + "/auth" + authSuffix);
         }
@@ -65,36 +72,26 @@ public class SaTokenConfig implements WebMvcConfigurer {
 
     private void addPublicFileDownloadExclude(List<String> excludes) {
         excludes.add("/file/*/get/**");
-
-        String apiPrefix = normalizePrefix(veloxProperties.getApiPrefix());
+        String apiPrefix = ApiPathPrefixes.normalize(veloxProperties.getApiPrefix());
         if (!apiPrefix.isEmpty()) {
             excludes.add(apiPrefix + "/file/*/get/**");
         }
     }
 
-    private void addCustomExclude(List<String> excludes, String path) {
-        excludes.add(path);
+    private static final class LoginCheckInterceptor implements HandlerInterceptor {
 
-        String apiPrefix = normalizePrefix(veloxProperties.getApiPrefix());
-        if (!apiPrefix.isEmpty()) {
-            excludes.add(apiPrefix + path);
-        }
-    }
+        private final SecurityAuthorizationService securityAuthorizationService;
 
-    private String normalizePrefix(String prefix) {
-        if (prefix == null || prefix.isBlank()) {
-            return "";
+        private LoginCheckInterceptor(SecurityAuthorizationService securityAuthorizationService) {
+            this.securityAuthorizationService = securityAuthorizationService;
         }
-        String normalized = prefix.trim();
-        if ("/".equals(normalized)) {
-            return "";
+
+        @Override
+        public boolean preHandle(@NonNull HttpServletRequest request,
+                                 @NonNull HttpServletResponse response,
+                                 @NonNull Object handler) {
+            securityAuthorizationService.checkAuthenticated();
+            return true;
         }
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        if (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
     }
 }

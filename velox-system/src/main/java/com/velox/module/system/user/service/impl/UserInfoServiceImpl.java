@@ -1,8 +1,8 @@
 package com.velox.module.system.user.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.domain.model.CurrentUserInfo;
 import com.velox.module.system.domain.model.Menu;
 import com.velox.module.system.domain.model.Profile;
@@ -42,6 +42,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     private final PasswordCipherService passwordCipherService;
     private final BusinessIdGenerator businessIdGenerator;
     private final ObjectMapper objectMapper;
+    private final SecuritySessionService securitySessionService;
 
     public UserInfoServiceImpl(
             UserMapper userMapper,
@@ -50,7 +51,8 @@ public class UserInfoServiceImpl implements UserInfoService {
             MenuMapper menuMapper,
             PasswordCipherService passwordCipherService,
             BusinessIdGenerator businessIdGenerator,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            SecuritySessionService securitySessionService
     ) {
         this.userMapper = userMapper;
         this.profileMapper = profileMapper;
@@ -59,11 +61,12 @@ public class UserInfoServiceImpl implements UserInfoService {
         this.passwordCipherService = passwordCipherService;
         this.businessIdGenerator = businessIdGenerator;
         this.objectMapper = objectMapper;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
     public CurrentUserInfo getCurrentUserInfo() {
-        String userId = StpUtil.getLoginIdAsString();
+        String userId = securitySessionService.requireCurrentLoginId();
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new ApiException(BusinessErrorCode.USER_NOT_FOUND);
@@ -116,7 +119,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateCurrentUserProfile(UserProfileUpdateCommand command) {
-        String userId = StpUtil.getLoginIdAsString();
+        String userId = securitySessionService.requireCurrentLoginId();
         User user = requireCurrentUser(userId);
         Profile profile = getOrInitProfile(user, currentOperator());
 
@@ -142,7 +145,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             throw new ApiException(BusinessErrorCode.PASSWORD_MISMATCH);
         }
 
-        String userId = StpUtil.getLoginIdAsString();
+        String userId = securitySessionService.requireCurrentLoginId();
         User user = requireCurrentUser(userId);
         if (!passwordCipherService.matches(command.getCurrentPassword(), user.getPassword())) {
             throw new ApiException(BusinessErrorCode.PASSWORD_ERROR);
@@ -160,7 +163,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateCurrentUserAvatar(String avatarUrl) {
-        String userId = StpUtil.getLoginIdAsString();
+        String userId = securitySessionService.requireCurrentLoginId();
         User user = requireCurrentUser(userId);
         Profile profile = getOrInitProfile(user, currentOperator());
         profile.setAvatar(avatarUrl);
@@ -294,6 +297,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     private String currentOperator() {
-        return StpUtil.isLogin() ? String.valueOf(StpUtil.getLoginIdDefaultNull()) : "system";
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        return StringUtils.hasText(loginId) ? loginId : "system";
     }
 }

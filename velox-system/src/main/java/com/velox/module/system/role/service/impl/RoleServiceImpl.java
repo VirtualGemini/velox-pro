@@ -1,11 +1,11 @@
 package com.velox.module.system.role.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.velox.module.system.common.constants.SystemRoleCode;
 import com.velox.module.system.common.enums.RoleTypeEnum;
 import com.velox.common.result.PageResult;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.domain.model.Menu;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.RoleMenuPermission;
@@ -51,6 +51,7 @@ public class RoleServiceImpl implements RoleService {
     private final RoleMenuPermissionMapper roleMenuPermissionMapper;
     private final PermissionService permissionService;
     private final BusinessIdGenerator businessIdGenerator;
+    private final SecuritySessionService securitySessionService;
 
     public RoleServiceImpl(
             MenuMapper menuMapper,
@@ -58,7 +59,8 @@ public class RoleServiceImpl implements RoleService {
             UserRoleMapper userRoleMapper,
             RoleMenuPermissionMapper roleMenuPermissionMapper,
             PermissionService permissionService,
-            BusinessIdGenerator businessIdGenerator
+            BusinessIdGenerator businessIdGenerator,
+            SecuritySessionService securitySessionService
     ) {
         this.menuMapper = menuMapper;
         this.roleMapper = roleMapper;
@@ -66,6 +68,7 @@ public class RoleServiceImpl implements RoleService {
         this.roleMenuPermissionMapper = roleMenuPermissionMapper;
         this.permissionService = permissionService;
         this.businessIdGenerator = businessIdGenerator;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
@@ -317,6 +320,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     private String currentOperator() {
-        return StpUtil.isLogin() ? String.valueOf(StpUtil.getLoginIdDefaultNull()) : "system";
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        return StringUtils.hasText(loginId) ? loginId : "system";
     }
 }

@@ -1,8 +1,8 @@
 package com.velox.module.system.auth.service.impl;
 
 import cn.hutool.crypto.digest.BCrypt;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.crypto.symmetric.PBKDF2;
-import cn.dev33.satoken.secure.SaSecureUtil;
 import com.velox.framework.config.SecurityProperties;
 import com.velox.module.system.auth.service.PasswordCipherService;
 import org.springframework.stereotype.Service;
@@ -74,7 +74,7 @@ public class PasswordCipherServiceImpl implements PasswordCipherService {
 
     private String encode(String rawPassword, String algorithm) {
         return switch (algorithm) {
-            case ALGORITHM_MD5 -> SaSecureUtil.md5(rawPassword);
+            case ALGORITHM_MD5 -> DigestUtil.md5Hex(rawPassword);
             case ALGORITHM_BCRYPT -> BCrypt.hashpw(rawPassword, BCrypt.gensalt(securityProperties.getPassword().getBcryptStrength()));
             case ALGORITHM_PBKDF2_SHA512 -> encodePbkdf2(rawPassword);
             default -> throw new IllegalStateException("Unsupported password algorithm: " + algorithm);
@@ -83,7 +83,7 @@ public class PasswordCipherServiceImpl implements PasswordCipherService {
 
     private boolean matches(String rawPassword, String encodedPassword, String algorithm) {
         return switch (algorithm) {
-            case ALGORITHM_MD5 -> SaSecureUtil.md5(rawPassword).equalsIgnoreCase(encodedPassword);
+            case ALGORITHM_MD5 -> DigestUtil.md5Hex(rawPassword).equalsIgnoreCase(encodedPassword);
             case ALGORITHM_BCRYPT -> BCrypt.checkpw(rawPassword, encodedPassword);
             case ALGORITHM_PBKDF2_SHA512 -> matchesPbkdf2(rawPassword, encodedPassword);
             default -> throw new IllegalStateException("Unsupported password algorithm: " + algorithm);

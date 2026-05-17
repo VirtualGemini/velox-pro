@@ -1,6 +1,5 @@
 package com.velox.module.system.file.controller;
 
-import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.velox.common.exception.ApiException;
@@ -8,6 +7,8 @@ import com.velox.common.exception.BusinessErrorCode;
 import com.velox.common.result.PageResult;
 import com.velox.common.result.Result;
 import com.velox.framework.file.api.util.FileTypeUtils;
+import com.velox.framework.security.api.annotation.RequirePermission;
+import com.velox.module.system.id.web.SystemFrontendIdCodecSupport;
 import com.velox.module.system.file.service.FileService;
 import com.velox.module.system.file.vo.FileCreateReqVO;
 import com.velox.module.system.file.vo.FilePageReqVO;
@@ -36,19 +37,28 @@ import java.util.List;
 public class FileController {
 
     private final FileService fileService;
+    private final SystemFrontendIdCodecSupport frontendIdCodecSupport;
 
-    public FileController(FileService fileService) {
+    public FileController(
+            FileService fileService,
+            SystemFrontendIdCodecSupport frontendIdCodecSupport
+    ) {
         this.fileService = fileService;
+        this.frontendIdCodecSupport = frontendIdCodecSupport;
     }
 
     @PostMapping("/upload")
     @Operation(summary = "上传文件", description = "模式一：后端上传文件")
-    @SaCheckPermission("system:file:upload")
+    @RequirePermission("system:file:upload")
     public Result<String> uploadFile(@Valid FileUploadReqVO uploadReqVO) throws java.io.IOException {
         MultipartFile file = uploadReqVO.getFile();
         byte[] content = IoUtil.readBytes(file.getInputStream());
-        return Result.ok(fileService.createFile(content, file.getOriginalFilename(),
-                uploadReqVO.getDirectory(), file.getContentType()));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifier(fileService.createFile(
+                content,
+                file.getOriginalFilename(),
+                uploadReqVO.getDirectory(),
+                file.getContentType()
+        )));
     }
 
     @GetMapping("/presigned-url")
@@ -61,15 +71,15 @@ public class FileController {
 
     @PostMapping("/create")
     @Operation(summary = "创建文件", description = "模式二：前端上传文件后，创建文件记录")
-    @SaCheckPermission("system:file:create")
+    @RequirePermission("system:file:create")
     public Result<String> createFile(@Valid @RequestBody FileCreateReqVO createReqVO) {
-        return Result.ok(fileService.createFile(createReqVO));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifier(fileService.createFile(createReqVO)));
     }
 
     @DeleteMapping("/delete")
     @Operation(summary = "删除文件")
     @Parameter(name = "id", description = "编号", required = true)
-    @SaCheckPermission("system:file:delete")
+    @RequirePermission("system:file:delete")
     public Result<Boolean> deleteFile(@RequestParam("id") String id) {
         fileService.deleteFile(id);
         return Result.ok(true);
@@ -77,7 +87,7 @@ public class FileController {
 
     @DeleteMapping("/delete-batch")
     @Operation(summary = "批量删除文件")
-    @SaCheckPermission("system:file:delete")
+    @RequirePermission("system:file:delete")
     public Result<Boolean> deleteFileList(@RequestParam("ids") List<String> ids) {
         fileService.deleteFileList(ids);
         return Result.ok(true);
@@ -86,14 +96,14 @@ public class FileController {
     @GetMapping("/get")
     @Operation(summary = "获得文件")
     @Parameter(name = "id", description = "编号", required = true)
-    @SaCheckPermission("system:file:query")
+    @RequirePermission("system:file:query")
     public Result<FileRespVO> getFile(@RequestParam("id") String id) {
         return Result.ok(fileService.getFile(id));
     }
 
     @GetMapping("/page")
     @Operation(summary = "获得文件分页")
-    @SaCheckPermission("system:file:query")
+    @RequirePermission("system:file:query")
     public Result<PageResult<FileRespVO>> getFilePage(FilePageReqVO pageReqVO) {
         return Result.ok(fileService.getFilePage(pageReqVO));
     }

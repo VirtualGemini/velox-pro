@@ -1,7 +1,8 @@
 package com.velox.module.system.role.controller;
 
-import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.velox.common.result.Result;
+import com.velox.framework.security.api.annotation.RequirePermission;
+import com.velox.module.system.id.web.SystemFrontendIdCodecSupport;
 import com.velox.module.system.role.dto.RoleListItemDTO;
 import com.velox.module.system.role.dto.RoleMenuPermissionUpdateCommand;
 import com.velox.module.system.role.dto.RoleQuery;
@@ -23,48 +24,53 @@ import com.velox.common.result.PageResult;
 public class RoleController {
 
     private final RoleService roleService;
+    private final SystemFrontendIdCodecSupport frontendIdCodecSupport;
 
-    public RoleController(RoleService roleService) {
+    public RoleController(
+            RoleService roleService,
+            SystemFrontendIdCodecSupport frontendIdCodecSupport
+    ) {
         this.roleService = roleService;
+        this.frontendIdCodecSupport = frontendIdCodecSupport;
     }
 
     @Operation(summary = "获取角色列表")
-    @SaCheckPermission("system:role:query")
+    @RequirePermission("system:role:query")
     @GetMapping("/list")
     public Result<PageResult<RoleListItemDTO>> list(RoleQuery query) {
         return Result.ok(roleService.list(query));
     }
 
     @Operation(summary = "新增角色")
-    @SaCheckPermission("system:role:create")
+    @RequirePermission("system:role:create")
     @PostMapping
     public Result<String> create(@Valid @RequestBody RoleSaveCommand command) {
-        return Result.ok(roleService.create(command));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifier(roleService.create(command)));
     }
 
     @Operation(summary = "编辑角色")
-    @SaCheckPermission("system:role:update")
+    @RequirePermission("system:role:update")
     @PutMapping("/{roleId}")
     public Result<Boolean> update(@PathVariable("roleId") String roleId, @Valid @RequestBody RoleSaveCommand command) {
         return Result.ok(roleService.update(roleId, command));
     }
 
     @Operation(summary = "删除角色")
-    @SaCheckPermission("system:role:delete")
+    @RequirePermission("system:role:delete")
     @DeleteMapping("/{roleId}")
     public Result<Boolean> delete(@PathVariable("roleId") String roleId) {
         return Result.ok(roleService.delete(roleId));
     }
 
     @Operation(summary = "获取角色菜单权限")
-    @SaCheckPermission("system:role:query")
+    @RequirePermission("system:role:query")
     @GetMapping("/{roleId}/menu-permissions")
     public Result<List<String>> getRoleMenuPermissions(@PathVariable("roleId") String roleId) {
-        return Result.ok(roleService.getRoleMenuPermissions(roleId));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifiers(roleService.getRoleMenuPermissions(roleId)));
     }
 
     @Operation(summary = "保存角色菜单权限")
-    @SaCheckPermission("system:role:permission")
+    @RequirePermission("system:role:permission")
     @PutMapping("/{roleId}/menu-permissions")
     public Result<Boolean> updateRoleMenuPermissions(
             @PathVariable("roleId") String roleId,

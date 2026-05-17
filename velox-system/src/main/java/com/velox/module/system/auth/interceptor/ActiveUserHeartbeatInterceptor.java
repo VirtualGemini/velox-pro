@@ -1,6 +1,6 @@
 package com.velox.module.system.auth.interceptor;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.auth.service.ActiveUserStatusService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,17 +12,21 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class ActiveUserHeartbeatInterceptor implements HandlerInterceptor {
 
     private final ActiveUserStatusService activeUserStatusService;
+    private final SecuritySessionService securitySessionService;
 
-    public ActiveUserHeartbeatInterceptor(ActiveUserStatusService activeUserStatusService) {
+    public ActiveUserHeartbeatInterceptor(ActiveUserStatusService activeUserStatusService,
+                                          SecuritySessionService securitySessionService) {
         this.activeUserStatusService = activeUserStatusService;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request,
                              @NonNull HttpServletResponse response,
                              @NonNull Object handler) {
-        if (StpUtil.isLogin()) {
-            activeUserStatusService.recordRequestActivity(StpUtil.getLoginIdAsString());
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        if (loginId != null && !loginId.isBlank()) {
+            activeUserStatusService.recordRequestActivity(loginId);
         }
         return true;
     }

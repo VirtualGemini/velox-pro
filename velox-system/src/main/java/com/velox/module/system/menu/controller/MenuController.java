@@ -1,8 +1,9 @@
 package com.velox.module.system.menu.controller;
 
-import cn.dev33.satoken.annotation.SaCheckPermission;
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.velox.common.result.Result;
+import com.velox.framework.security.api.annotation.RequireAuthenticated;
+import com.velox.framework.security.api.annotation.RequirePermission;
+import com.velox.module.system.id.web.SystemFrontendIdCodecSupport;
 import com.velox.module.system.menu.dto.MenuSaveCommand;
 import com.velox.module.system.menu.dto.MenuRouteDTO;
 import com.velox.module.system.menu.service.MenuService;
@@ -26,34 +27,39 @@ import java.util.List;
 public class MenuController {
 
     private final MenuService menuService;
+    private final SystemFrontendIdCodecSupport frontendIdCodecSupport;
 
-    public MenuController(MenuService menuService) {
+    public MenuController(
+            MenuService menuService,
+            SystemFrontendIdCodecSupport frontendIdCodecSupport
+    ) {
         this.menuService = menuService;
+        this.frontendIdCodecSupport = frontendIdCodecSupport;
     }
 
     @Operation(summary = "获取简化菜单列表")
-    @SaCheckLogin
+    @RequirePermission("system:menu:query")
     @GetMapping("/simple")
     public Result<List<MenuRouteDTO>> getSimpleMenus() {
         return Result.ok(menuService.getSimpleMenus());
     }
 
     @Operation(summary = "新增菜单")
-    @SaCheckPermission("system:menu:create")
+    @RequirePermission("system:menu:create")
     @PostMapping
     public Result<String> create(@Valid @RequestBody MenuSaveCommand command) {
-        return Result.ok(menuService.create(command));
+        return Result.ok(frontendIdCodecSupport.encodeIdentifier(menuService.create(command)));
     }
 
     @Operation(summary = "编辑菜单")
-    @SaCheckPermission("system:menu:update")
+    @RequirePermission("system:menu:update")
     @PutMapping("/{menuId}")
     public Result<Boolean> update(@PathVariable("menuId") String menuId, @Valid @RequestBody MenuSaveCommand command) {
         return Result.ok(menuService.update(menuId, command));
     }
 
     @Operation(summary = "删除菜单")
-    @SaCheckPermission("system:menu:delete")
+    @RequirePermission("system:menu:delete")
     @DeleteMapping("/{menuId}")
     public Result<Boolean> delete(@PathVariable("menuId") String menuId) {
         return Result.ok(menuService.delete(menuId));

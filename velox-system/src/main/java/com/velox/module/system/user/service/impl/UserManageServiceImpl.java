@@ -1,9 +1,9 @@
 package com.velox.module.system.user.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
 import com.velox.common.result.PageResult;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.domain.model.Profile;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.User;
@@ -51,6 +51,7 @@ public class UserManageServiceImpl implements UserManageService {
     private final PermissionService permissionService;
     private final BusinessIdGenerator businessIdGenerator;
     private final ActiveUserStatusService activeUserStatusService;
+    private final SecuritySessionService securitySessionService;
 
     public UserManageServiceImpl(UserMapper userMapper,
                                  ProfileMapper profileMapper,
@@ -59,7 +60,8 @@ public class UserManageServiceImpl implements UserManageService {
                                  PasswordCipherService passwordCipherService,
                                  PermissionService permissionService,
                                  BusinessIdGenerator businessIdGenerator,
-                                 ActiveUserStatusService activeUserStatusService) {
+                                 ActiveUserStatusService activeUserStatusService,
+                                 SecuritySessionService securitySessionService) {
         this.userMapper = userMapper;
         this.profileMapper = profileMapper;
         this.roleMapper = roleMapper;
@@ -68,6 +70,7 @@ public class UserManageServiceImpl implements UserManageService {
         this.permissionService = permissionService;
         this.businessIdGenerator = businessIdGenerator;
         this.activeUserStatusService = activeUserStatusService;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
@@ -235,7 +238,7 @@ public class UserManageServiceImpl implements UserManageService {
     }
 
     private void ensureCanUpdateUser(String userId) {
-        String currentUserId = StpUtil.getLoginIdAsString();
+        String currentUserId = securitySessionService.currentLoginIdOrNull();
         if (!StringUtils.hasText(currentUserId)) {
             throw new ApiException(BusinessErrorCode.USER_UPDATE_FORBIDDEN);
         }
@@ -250,7 +253,7 @@ public class UserManageServiceImpl implements UserManageService {
     }
 
     private void ensureCanDeleteUser(String userId) {
-        String currentUserId = StpUtil.getLoginIdAsString();
+        String currentUserId = securitySessionService.currentLoginIdOrNull();
         if (!StringUtils.hasText(currentUserId)) {
             throw new ApiException(BusinessErrorCode.USER_DELETE_FORBIDDEN);
         }
@@ -526,6 +529,7 @@ public class UserManageServiceImpl implements UserManageService {
     }
 
     private String currentOperator() {
-        return StpUtil.isLogin() ? String.valueOf(StpUtil.getLoginIdDefaultNull()) : "system";
+        String loginId = securitySessionService.currentLoginIdOrNull();
+        return StringUtils.hasText(loginId) ? loginId : "system";
     }
 }
