@@ -1,6 +1,6 @@
 package com.velox.module.system.file.persistence;
 
-import com.velox.framework.persistence.BaseMapperExt;
+import com.velox.framework.persistence.api.mapper.BaseMapperExt;
 import com.velox.module.system.file.domain.model.File;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;

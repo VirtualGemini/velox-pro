@@ -1,29 +1,26 @@
-package com.velox.framework.persistence.config;
+package com.velox.framework.persistence.properties;
 
+import com.velox.framework.persistence.common.message.PersistenceCommonMessages;
+import com.velox.framework.persistence.exception.PersistenceConfigException;
+import com.velox.framework.persistence.spi.dialect.DatabaseDialect;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * 数据源配置
- */
 @Validated
 @ConfigurationProperties(prefix = "velox.datasource")
-public class VeloxDataSourceProperties {
+public class VeloxPersistenceProperties {
 
-    /**
-     * 当前激活的数据源类型，默认推荐 PostgreSQL
-     */
-    private String type = "postgresql";
+    private static final String DEFAULT_DIALECT = "";
 
-    /**
-     * 可并存的多套数据库连接配置
-     */
+    private String type;
+
     @Valid
     private Map<String, DatabaseConnectionProperties> configs = new LinkedHashMap<>();
 
@@ -43,42 +40,43 @@ public class VeloxDataSourceProperties {
         this.configs = configs;
     }
 
-    public DatabaseConnectionProperties getActiveConfig() {
-        DatabaseConnectionProperties config = configs.get(type);
-        if (config == null) {
-            throw new IllegalStateException("Missing datasource config for database type: " + type);
+    public void validate() {
+        String normalizedType = normalize(type);
+        if (normalizedType.isEmpty()) {
+            throw new PersistenceConfigException(PersistenceCommonMessages.DATABASE_TYPE_MUST_NOT_BE_BLANK);
         }
-        return config;
+        if (configs == null || configs.isEmpty()) {
+            throw new PersistenceConfigException(PersistenceCommonMessages.DATASOURCE_CONFIGS_MUST_NOT_BE_EMPTY);
+        }
+        DatabaseConnectionProperties config = configs.get(normalizedType);
+        if (config == null) {
+            throw new PersistenceConfigException(PersistenceCommonMessages.DATASOURCE_CONFIG_MISSING.formatted(normalizedType));
+        }
+        config.validate(normalizedType);
+    }
+
+    public DatabaseConnectionProperties getActiveConfig() {
+        validate();
+        return configs.get(normalize(type));
+    }
+
+    public String getNormalizedType() {
+        validate();
+        return normalize(type);
     }
 
     @Validated
     public static class DatabaseConnectionProperties {
 
-        /**
-         * JDBC 驱动类名；为空时使用数据库类型默认驱动
-         */
         private String driverClassName;
 
-        /**
-         * JDBC 连接串
-         */
         @NotBlank
         private String url;
 
-        /**
-         * 数据库用户名
-         */
-        @NotBlank
         private String username;
 
-        /**
-         * 数据库密码
-         */
         private String password;
 
-        /**
-         * 透传给底层数据源的额外参数，便于未来扩展数据库特性
-         */
         private Map<String, String> dataSourceProperties = new LinkedHashMap<>();
 
         public String getDriverClassName() {
@@ -124,5 +122,15 @@ public class VeloxDataSourceProperties {
         public void setDataSourceProperties(Map<String, String> dataSourceProperties) {
             this.dataSourceProperties = dataSourceProperties;
         }
+
+        public void validate(String type) {
+            if (url == null || url.isBlank()) {
+                throw new PersistenceConfigException(PersistenceCommonMessages.DATASOURCE_URL_MUST_NOT_BE_BLANK.formatted(type));
+            }
+        }
+    }
+
+    private String normalize(String value) {
+        return value == null ? DEFAULT_DIALECT : value.trim().toLowerCase(Locale.ROOT);
     }
 }

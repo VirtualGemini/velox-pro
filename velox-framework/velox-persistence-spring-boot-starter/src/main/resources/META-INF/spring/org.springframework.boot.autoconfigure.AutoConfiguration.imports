@@ -1,4 +1,1 @@
-com.velox.framework.persistence.autoconfigure.VeloxDataSourceAutoConfiguration
-com.velox.framework.persistence.autoconfigure.VeloxMySqlAutoConfiguration
-com.velox.framework.persistence.autoconfigure.VeloxPostgreSqlAutoConfiguration
-com.velox.framework.persistence.autoconfigure.VeloxMybatisPlusAutoConfiguration
+com.velox.framework.persistence.autoconfigure.VeloxPersistenceAutoConfiguration
