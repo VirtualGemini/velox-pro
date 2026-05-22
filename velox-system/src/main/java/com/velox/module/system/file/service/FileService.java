@@ -12,11 +12,13 @@ public interface FileService {
 
     PageResult<FileRespVO> getFilePage(FilePageReqVO pageReqVO);
 
+    List<String> getFileTypes();
+
     String createFile(byte[] content, String name, String directory, String type);
 
     FilePresignedUrlRespVO presignPutUrl(String name, String directory);
 
-    String presignGetUrl(String url, Integer expirationSeconds);
+    String presignGetUrl(String configId, String url, Integer expirationSeconds);
 
     String createFile(FileCreateReqVO createReqVO);
 

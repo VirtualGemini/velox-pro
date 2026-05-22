@@ -26,11 +26,8 @@ public class FileRespVO {
     @Schema(description = "文件大小")
     private Long size;
 
-    @Schema(description = "创建时间")
-    private String createTime;
-
-    @Schema(description = "更新时间")
-    private String updateTime;
+    @Schema(description = "上传时间")
+    private String uploadTime;
 
     @Schema(description = "创建人")
     private String createBy;
@@ -91,20 +88,12 @@ public class FileRespVO {
         this.size = size;
     }
 
-    public String getCreateTime() {
-        return createTime;
+    public String getUploadTime() {
+        return uploadTime;
     }
 
-    public void setCreateTime(String createTime) {
-        this.createTime = createTime;
-    }
-
-    public String getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(String updateTime) {
-        this.updateTime = updateTime;
+    public void setUploadTime(String uploadTime) {
+        this.uploadTime = uploadTime;
     }
 
     public String getCreateBy() {

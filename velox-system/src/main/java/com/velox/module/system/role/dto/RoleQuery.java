@@ -32,6 +32,18 @@ public class RoleQuery {
     @Schema(description = "结束时间", example = "2025-05-31")
     private String endTime;
 
+    @Schema(description = "创建开始时间", example = "2026-05-22 10:00:00")
+    private String createTimeStart;
+
+    @Schema(description = "创建结束时间", example = "2026-05-22 18:00:00")
+    private String createTimeEnd;
+
+    @Schema(description = "编辑开始时间", example = "2026-05-22 10:00:00")
+    private String updateTimeStart;
+
+    @Schema(description = "编辑结束时间", example = "2026-05-22 18:00:00")
+    private String updateTimeEnd;
+
     public Long getCurrent() {
         return current;
     }
@@ -102,5 +114,37 @@ public class RoleQuery {
 
     public void setEndTime(String endTime) {
         this.endTime = endTime;
+    }
+
+    public String getCreateTimeStart() {
+        return createTimeStart;
+    }
+
+    public void setCreateTimeStart(String createTimeStart) {
+        this.createTimeStart = createTimeStart;
+    }
+
+    public String getCreateTimeEnd() {
+        return createTimeEnd;
+    }
+
+    public void setCreateTimeEnd(String createTimeEnd) {
+        this.createTimeEnd = createTimeEnd;
+    }
+
+    public String getUpdateTimeStart() {
+        return updateTimeStart;
+    }
+
+    public void setUpdateTimeStart(String updateTimeStart) {
+        this.updateTimeStart = updateTimeStart;
+    }
+
+    public String getUpdateTimeEnd() {
+        return updateTimeEnd;
+    }
+
+    public void setUpdateTimeEnd(String updateTimeEnd) {
+        this.updateTimeEnd = updateTimeEnd;
     }
 }

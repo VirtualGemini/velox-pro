@@ -38,6 +38,8 @@ public class SecurityWebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         List<String> excludes = new ArrayList<>();
         addAuthExclude(excludes, "/login");
+        addAuthExclude(excludes, "/login-code/send");
+        addAuthExclude(excludes, "/login-code/login");
         addAuthExclude(excludes, "/captcha");
         addAuthExclude(excludes, "/register");
         addAuthExclude(excludes, "/forgot-password/code");

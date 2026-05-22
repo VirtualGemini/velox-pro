@@ -62,8 +62,7 @@ CREATE TABLE sys_file (
   url varchar(500),
   type varchar(100),
   size bigint DEFAULT 0,
-  create_time timestamp DEFAULT CURRENT_TIMESTAMP,
-  update_time timestamp DEFAULT CURRENT_TIMESTAMP,
+  upload_time timestamp DEFAULT CURRENT_TIMESTAMP,
   create_by bigint,
   update_by bigint,
   deleted smallint DEFAULT 0
@@ -144,7 +143,7 @@ INSERT INTO sys_menu (id, parent_id, menu_type, name, title, path, component, re
   ('1900000000000000035','1900000000000000080','menu','UserCenter','menus.system.userCenter','user-center','/system/user-center',NULL,NULL,'system:user-center',1,3,1,1,1,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   ('1900000000000000106','1900000000000000035','button','UserCenterProfileQuery','Profile Query',NULL,NULL,NULL,NULL,'system:user-center:profile-query',1,1,0,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   ('1900000000000000094','1900000000000000035','button','UserCenterProfileUpdate','Update Profile',NULL,NULL,NULL,NULL,'system:user-center:profile-update',1,2,0,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
-  ('1900000000000000095','1900000000000000035','button','UserCenterPasswordUpdate','Update Password',NULL,NULL,NULL,NULL,'system:user-center:password-update',1,3,0,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,
+  ('1900000000000000095','1900000000000000035','button','UserCenterPasswordUpdate','Update Password',NULL,NULL,NULL,NULL,'system:user-center:password-update',1,3,0,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   ('1900000000000000096','1900000000000000035','button','UserCenterAvatarUpdate','Update Avatar',NULL,NULL,NULL,NULL,'system:user-center:avatar-update',1,4,0,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   -- System > Menus
   ('1900000000000000063','1900000000000000080','menu','Menus','menus.system.menu','menu','/system/menu',NULL,NULL,NULL,1,4,1,0,0,NULL,0,0,NULL,0,NULL,0,'2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),

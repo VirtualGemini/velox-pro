@@ -11,6 +11,8 @@ abstract class AbstractVerificationCodeStore implements VerificationCodeStore {
     protected static final String CAPTCHA_PREFIX = "auth:captcha:";
     protected static final String RESET_PREFIX = "auth:reset:";
     protected static final String RESET_SENT_PREFIX = "auth:reset:sent:";
+    protected static final String LOGIN_CODE_PREFIX = "auth:login:";
+    protected static final String LOGIN_CODE_SENT_PREFIX = "auth:login:sent:";
 
     protected final SecurityProperties securityProperties;
 

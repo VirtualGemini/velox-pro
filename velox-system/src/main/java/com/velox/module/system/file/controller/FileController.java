@@ -108,6 +108,13 @@ public class FileController {
         return Result.ok(fileService.getFilePage(pageReqVO));
     }
 
+    @GetMapping("/types")
+    @Operation(summary = "获得文件类型列表")
+    @RequirePermission("system:file:query")
+    public Result<List<String>> getFileTypes() {
+        return Result.ok(fileService.getFileTypes());
+    }
+
     @GetMapping("/{configId}/get/**")
     @Operation(summary = "下载文件")
     @Parameter(name = "configId", description = "配置编号", required = true)
@@ -129,12 +136,30 @@ public class FileController {
         FileTypeUtils.writeAttachment(response, path, content);
     }
 
+    @GetMapping("/download")
+    @Operation(summary = "按文件编号下载文件")
+    @Parameter(name = "id", description = "文件编号", required = true)
+    @RequirePermission("system:file:download")
+    public void downloadFile(@RequestParam("id") String id,
+                             HttpServletResponse response) throws java.io.IOException {
+        FileRespVO file = fileService.getFile(id);
+        byte[] content = fileService.getFileContent(file.getConfigId(), file.getPath());
+        if (content == null) {
+            log.warn("[downloadFile][id({}) configId({}) path({}) 文件不存在]", id, file.getConfigId(), file.getPath());
+            response.setStatus(HttpStatus.NOT_FOUND.value());
+            return;
+        }
+        String filename = StrUtil.isNotBlank(file.getName()) ? file.getName() : file.getPath();
+        FileTypeUtils.writeAttachment(response, filename, content);
+    }
+
     @GetMapping("/presigned-get-url")
     @Operation(summary = "获取文件预签名读取地址")
     public Result<String> presignGetUrl(
+            @RequestParam(value = "configId", required = false) String configId,
             @RequestParam("url") String url,
             @RequestParam(value = "expirationSeconds", required = false) Integer expirationSeconds) {
-        return Result.ok(fileService.presignGetUrl(url, expirationSeconds));
+        return Result.ok(fileService.presignGetUrl(configId, url, expirationSeconds));
     }
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FileController.class);

@@ -1,13 +1,18 @@
 package com.velox.module.system.file.domain.model;
 
-import com.velox.domain.model.BaseEntity;
-
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @TableName(value = "sys_file")
-public class File extends BaseEntity {
+public class File {
+
+    @TableId(type = IdType.INPUT)
+    private String id;
 
     private String configId;
 
@@ -20,6 +25,23 @@ public class File extends BaseEntity {
     private String type;
 
     private Long size;
+
+    @TableField("upload_time")
+    private LocalDateTime uploadTime;
+
+    private String createBy;
+
+    private String updateBy;
+
+    private Integer deleted;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = normalizeIdentifier(id);
+    }
 
     public String getConfigId() {
         return configId;
@@ -69,22 +91,66 @@ public class File extends BaseEntity {
         this.size = size;
     }
 
+    public LocalDateTime getUploadTime() {
+        return uploadTime;
+    }
+
+    public void setUploadTime(LocalDateTime uploadTime) {
+        this.uploadTime = uploadTime;
+    }
+
+    public String getCreateBy() {
+        return createBy;
+    }
+
+    public void setCreateBy(String createBy) {
+        this.createBy = normalizeIdentifier(createBy);
+    }
+
+    public String getUpdateBy() {
+        return updateBy;
+    }
+
+    public void setUpdateBy(String updateBy) {
+        this.updateBy = normalizeIdentifier(updateBy);
+    }
+
+    public Integer getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
+    }
+
+    private static String normalizeIdentifier(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
         File file = (File) o;
-        return Objects.equals(configId, file.configId) &&
+        return Objects.equals(id, file.id) &&
+                Objects.equals(configId, file.configId) &&
                 Objects.equals(name, file.name) &&
                 Objects.equals(path, file.path) &&
                 Objects.equals(url, file.url) &&
                 Objects.equals(type, file.type) &&
-                Objects.equals(size, file.size);
+                Objects.equals(size, file.size) &&
+                Objects.equals(uploadTime, file.uploadTime) &&
+                Objects.equals(createBy, file.createBy) &&
+                Objects.equals(updateBy, file.updateBy) &&
+                Objects.equals(deleted, file.deleted);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), configId, name, path, url, type, size);
+        return Objects.hash(id, configId, name, path, url, type, size, uploadTime, createBy, updateBy, deleted);
     }
 }

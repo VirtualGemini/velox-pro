@@ -208,6 +208,15 @@ public class FileConfigServiceImpl implements FileConfigService {
         LambdaQueryWrapper<FileConfig> wrapper = new LambdaQueryWrapper<FileConfig>()
                 .like(StrUtil.isNotEmpty(pageReqVO.getName()), FileConfig::getName, pageReqVO.getName())
                 .eq(pageReqVO.getStorage() != null, FileConfig::getStorage, pageReqVO.getStorage())
+                .eq(pageReqVO.getEnabled() != null, FileConfig::getEnabled, pageReqVO.getEnabled())
+                .ge(StrUtil.isNotBlank(pageReqVO.getCreateTimeStart()), FileConfig::getCreateTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getCreateTimeStart()))
+                .le(StrUtil.isNotBlank(pageReqVO.getCreateTimeEnd()), FileConfig::getCreateTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getCreateTimeEnd()))
+                .ge(StrUtil.isNotBlank(pageReqVO.getUpdateTimeStart()), FileConfig::getUpdateTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getUpdateTimeStart()))
+                .le(StrUtil.isNotBlank(pageReqVO.getUpdateTimeEnd()), FileConfig::getUpdateTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getUpdateTimeEnd()))
                 .orderByDesc(FileConfig::getCreateTime)
                 .orderByDesc(FileConfig::getUpdateTime);
         Page<FileConfig> page = fileConfigMapper.selectPage(

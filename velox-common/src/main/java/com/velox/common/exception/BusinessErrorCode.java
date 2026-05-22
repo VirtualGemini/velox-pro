@@ -47,6 +47,12 @@ public enum BusinessErrorCode implements ErrorCode {
     RESET_CODE_SEND_TOO_FREQUENT(12016, "验证码发送过于频繁，请稍后重试"),
     EMAIL_SERVICE_DISABLED(12017, "邮件能力未启用，请联系管理员"),
     EMAIL_SEND_FAILED(12018, "邮件发送失败，请稍后重试"),
+    LOGIN_CODE_ERROR(12019, "登录验证码错误"),
+    LOGIN_CODE_EXPIRED(12020, "登录验证码已过期"),
+    LOGIN_CODE_SEND_TOO_FREQUENT(12021, "登录验证码发送过于频繁，请稍后重试"),
+    PHONE_LOGIN_NOT_SUPPORTED(12022, "手机号登录暂未开通"),
+    PHONE_REQUIRED(12023, "手机号不能为空"),
+    PHONE_NOT_BOUND(12024, "该手机号未绑定任何账号"),
 
     // ---- 文件模块 (13000-13999) ----
     FILE_UPLOAD_FAILED(13000, "文件上传失败"),

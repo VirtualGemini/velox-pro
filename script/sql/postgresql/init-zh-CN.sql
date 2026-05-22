@@ -62,8 +62,7 @@ CREATE TABLE sys_file (
   url varchar(500),
   type varchar(100),
   size bigint DEFAULT 0,
-  create_time timestamp DEFAULT CURRENT_TIMESTAMP,
-  update_time timestamp DEFAULT CURRENT_TIMESTAMP,
+  upload_time timestamp DEFAULT CURRENT_TIMESTAMP,
   create_by bigint,
   update_by bigint,
   deleted smallint DEFAULT 0

@@ -2,7 +2,9 @@ package com.velox.module.system.auth.controller;
 
 import com.velox.common.result.Result;
 import com.velox.module.system.auth.dto.CaptchaDTO;
+import com.velox.module.system.auth.dto.CodeLoginCommand;
 import com.velox.module.system.auth.dto.ForgotPasswordCodeCommand;
+import com.velox.module.system.auth.dto.LoginCodeSendCommand;
 import com.velox.module.system.auth.dto.LoginCommand;
 import com.velox.module.system.auth.dto.RegisterCommand;
 import com.velox.module.system.auth.dto.ResetPasswordCommand;
@@ -34,6 +36,19 @@ public class LoginController {
     @PostMapping("/login")
     public Result<TokenDTO> login(@Valid @RequestBody LoginCommand command) {
         return Result.ok(loginService.login(command));
+    }
+
+    @Operation(summary = "发送登录验证码")
+    @PostMapping("/login-code/send")
+    public Result<Void> sendLoginCode(@Valid @RequestBody LoginCodeSendCommand command) {
+        loginService.sendLoginCode(command);
+        return Result.ok();
+    }
+
+    @Operation(summary = "验证码登录")
+    @PostMapping("/login-code/login")
+    public Result<TokenDTO> loginByCode(@Valid @RequestBody CodeLoginCommand command) {
+        return Result.ok(loginService.loginByCode(command));
     }
 
     @Operation(summary = "注册")

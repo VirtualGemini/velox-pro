@@ -91,12 +91,23 @@ public class RoleServiceImpl implements RoleService {
         if (query.getEnabled() != null) {
             wrapper.eq(Role::getEnabled, query.getEnabled() ? 1 : 0);
         }
-        if (query.getStartTime() != null && !query.getStartTime().isEmpty()) {
-            wrapper.ge(Role::getCreateTime, RequestDateTimeFormatter.toUtcStartOfDay(LocalDate.parse(query.getStartTime())));
+        if (StringUtils.hasText(query.getCreateTimeStart())) {
+            wrapper.ge(Role::getCreateTime, RequestDateTimeFormatter.parseToUtc(query.getCreateTimeStart()));
+        } else if (StringUtils.hasText(query.getStartTime())) {
+            wrapper.ge(Role::getCreateTime,
+                    RequestDateTimeFormatter.toUtcStartOfDay(LocalDate.parse(query.getStartTime())));
         }
-        if (query.getEndTime() != null && !query.getEndTime().isEmpty()) {
-            LocalDateTime endOfDay = RequestDateTimeFormatter.toUtcEndOfDay(LocalDate.parse(query.getEndTime()));
-            wrapper.le(Role::getCreateTime, endOfDay);
+        if (StringUtils.hasText(query.getCreateTimeEnd())) {
+            wrapper.le(Role::getCreateTime, RequestDateTimeFormatter.parseToUtc(query.getCreateTimeEnd()));
+        } else if (StringUtils.hasText(query.getEndTime())) {
+            wrapper.le(Role::getCreateTime,
+                    RequestDateTimeFormatter.toUtcEndOfDay(LocalDate.parse(query.getEndTime())));
+        }
+        if (StringUtils.hasText(query.getUpdateTimeStart())) {
+            wrapper.ge(Role::getUpdateTime, RequestDateTimeFormatter.parseToUtc(query.getUpdateTimeStart()));
+        }
+        if (StringUtils.hasText(query.getUpdateTimeEnd())) {
+            wrapper.le(Role::getUpdateTime, RequestDateTimeFormatter.parseToUtc(query.getUpdateTimeEnd()));
         }
         wrapper.orderByDesc(Role::getCreateTime)
                 .orderByDesc(Role::getUpdateTime);

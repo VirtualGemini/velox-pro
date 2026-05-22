@@ -104,6 +104,33 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
         return Boolean.TRUE.equals(stringRedisTemplate.hasKey(RESET_PREFIX + email));
     }
 
+    @Override
+    public boolean trySaveLoginCode(String target, String code) {
+        Long result = stringRedisTemplate.execute(
+                SAVE_RESET_CODE_IF_ALLOWED_SCRIPT,
+                List.of(LOGIN_CODE_PREFIX + target, LOGIN_CODE_SENT_PREFIX + target),
+                digest(code),
+                String.valueOf(securityProperties.getVerification().getResetCodeTtlSeconds()),
+                String.valueOf(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+        );
+        return Long.valueOf(1L).equals(result);
+    }
+
+    @Override
+    public void invalidateLoginCode(String target) {
+        stringRedisTemplate.delete(List.of(LOGIN_CODE_PREFIX + target, LOGIN_CODE_SENT_PREFIX + target));
+    }
+
+    @Override
+    public VerificationResult verifyLoginCode(String target, String code) {
+        return executeCompareAndDeleteIfMatch(LOGIN_CODE_PREFIX + target, digest(code));
+    }
+
+    @Override
+    public boolean loginCodeExists(String target) {
+        return Boolean.TRUE.equals(stringRedisTemplate.hasKey(LOGIN_CODE_PREFIX + target));
+    }
+
     private VerificationResult executeConsumeAndCompare(String redisKey, String digestedCode) {
         Long result = stringRedisTemplate.execute(
                 CONSUME_AND_COMPARE_SCRIPT,

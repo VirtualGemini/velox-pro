@@ -11,6 +11,21 @@ public class FileConfigPageReqVO {
     @Schema(description = "存储器")
     private Integer storage;
 
+    @Schema(description = "启用状态")
+    private Integer enabled;
+
+    @Schema(description = "创建开始时间", example = "2026-05-22 10:00:00")
+    private String createTimeStart;
+
+    @Schema(description = "创建结束时间", example = "2026-05-22 18:00:00")
+    private String createTimeEnd;
+
+    @Schema(description = "编辑开始时间", example = "2026-05-22 10:00:00")
+    private String updateTimeStart;
+
+    @Schema(description = "编辑结束时间", example = "2026-05-22 18:00:00")
+    private String updateTimeEnd;
+
     @Schema(description = "页码", example = "1")
     private Integer page = 1;
 
@@ -31,6 +46,46 @@ public class FileConfigPageReqVO {
 
     public void setStorage(Integer storage) {
         this.storage = storage;
+    }
+
+    public Integer getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Integer enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getCreateTimeStart() {
+        return createTimeStart;
+    }
+
+    public void setCreateTimeStart(String createTimeStart) {
+        this.createTimeStart = createTimeStart;
+    }
+
+    public String getCreateTimeEnd() {
+        return createTimeEnd;
+    }
+
+    public void setCreateTimeEnd(String createTimeEnd) {
+        this.createTimeEnd = createTimeEnd;
+    }
+
+    public String getUpdateTimeStart() {
+        return updateTimeStart;
+    }
+
+    public void setUpdateTimeStart(String updateTimeStart) {
+        this.updateTimeStart = updateTimeStart;
+    }
+
+    public String getUpdateTimeEnd() {
+        return updateTimeEnd;
+    }
+
+    public void setUpdateTimeEnd(String updateTimeEnd) {
+        this.updateTimeEnd = updateTimeEnd;
     }
 
     public Integer getPage() {

@@ -7,10 +7,13 @@ import cn.hutool.crypto.digest.DigestUtil;
 import com.velox.common.exception.ApiException;
 import com.velox.common.exception.BusinessErrorCode;
 import com.velox.common.result.PageResult;
+import com.velox.framework.file.common.error.FileErrorCode;
+import com.velox.framework.file.exception.FileClientException;
 import com.velox.module.system.file.domain.model.File;
 import com.velox.framework.file.api.client.FileClient;
 import com.velox.framework.file.api.util.FileTypeUtils;
 import com.velox.framework.id.BusinessIdGenerator;
+import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.file.persistence.FileMapper;
 import com.velox.framework.web.RequestDateTimeFormatter;
 import com.velox.module.system.file.service.FileConfigService;
@@ -27,7 +30,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FileServiceImpl implements FileService {
@@ -46,25 +51,52 @@ public class FileServiceImpl implements FileService {
 
     private final BusinessIdGenerator businessIdGenerator;
 
+    private final SecuritySessionService securitySessionService;
+
     public FileServiceImpl(FileConfigService fileConfigService,
                            FileMapper fileMapper,
-                           BusinessIdGenerator businessIdGenerator) {
+                           BusinessIdGenerator businessIdGenerator,
+                           SecuritySessionService securitySessionService) {
         this.fileConfigService = fileConfigService;
         this.fileMapper = fileMapper;
         this.businessIdGenerator = businessIdGenerator;
+        this.securitySessionService = securitySessionService;
     }
 
     @Override
     public PageResult<FileRespVO> getFilePage(FilePageReqVO pageReqVO) {
+        String name = StrUtil.trim(pageReqVO.getName());
+        String type = StrUtil.trim(pageReqVO.getType());
         LambdaQueryWrapper<File> wrapper = new LambdaQueryWrapper<File>()
+                .like(StrUtil.isNotBlank(name), File::getName, name)
                 .like(StrUtil.isNotEmpty(pageReqVO.getPath()), File::getPath, pageReqVO.getPath())
-                .like(StrUtil.isNotEmpty(pageReqVO.getType()), File::getType, pageReqVO.getType())
-                .orderByDesc(File::getCreateTime)
-                .orderByDesc(File::getUpdateTime);
+                .eq(StrUtil.isNotBlank(type), File::getType, type)
+                .ge(pageReqVO.getSizeMinBytes() != null, File::getSize, pageReqVO.getSizeMinBytes())
+                .le(pageReqVO.getSizeMaxBytes() != null, File::getSize, pageReqVO.getSizeMaxBytes())
+                .ge(StrUtil.isNotBlank(pageReqVO.getUploadTimeStart()), File::getUploadTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getUploadTimeStart()))
+                .le(StrUtil.isNotBlank(pageReqVO.getUploadTimeEnd()), File::getUploadTime,
+                        RequestDateTimeFormatter.parseToUtc(pageReqVO.getUploadTimeEnd()))
+                .orderByDesc(File::getUploadTime);
         Page<File> page = fileMapper.selectPage(
                 new Page<>(pageReqVO.getPage(), pageReqVO.getSize()), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getRecords().stream().map(this::toFileRespVO).toList());
+    }
+
+    @Override
+    public List<String> getFileTypes() {
+        return fileMapper.selectList(new LambdaQueryWrapper<File>()
+                        .select(File::getType)
+                        .isNotNull(File::getType)
+                        .groupBy(File::getType)
+                        .orderByAsc(File::getType))
+                .stream()
+                .map(File::getType)
+                .filter(StrUtil::isNotBlank)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -96,6 +128,7 @@ public class FileServiceImpl implements FileService {
             fileDO.setUrl(url);
             fileDO.setType(type);
             fileDO.setSize((long) content.length);
+            fillCreateAuditFields(fileDO);
             fileMapper.insert(fileDO);
             return url;
         } catch (Exception ex) {
@@ -146,9 +179,19 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public String presignGetUrl(String url, Integer expirationSeconds) {
-        FileClient fileClient = fileConfigService.getMasterFileClient();
-        return fileClient.presignGetUrl(url, expirationSeconds);
+    public String presignGetUrl(String configId, String url, Integer expirationSeconds) {
+        FileClient fileClient = StrUtil.isNotBlank(configId)
+                ? fileConfigService.getFileClient(configId)
+                : fileConfigService.getMasterFileClient();
+        try {
+            return fileClient.presignGetUrl(url, expirationSeconds);
+        } catch (FileClientException exception) {
+            if (FileErrorCode.OPERATION_NOT_SUPPORTED.code().equals(exception.getCode()) &&
+                    StrUtil.isNotBlank(url)) {
+                return url;
+            }
+            throw exception;
+        }
     }
 
     @Override
@@ -157,8 +200,10 @@ public class FileServiceImpl implements FileService {
         File fileDO = new File();
         fileDO.setId(businessIdGenerator.nextFileId());
         fileDO.setConfigId(createReqVO.getConfigId());
+        fileDO.setName(FileUtil.getName(createReqVO.getPath()));
         fileDO.setPath(createReqVO.getPath());
         fileDO.setUrl(createReqVO.getUrl());
+        fillCreateAuditFields(fileDO);
         fileMapper.insert(fileDO);
         return fileDO.getId();
     }
@@ -210,6 +255,15 @@ public class FileServiceImpl implements FileService {
         }
     }
 
+    private void fillCreateAuditFields(File fileDO) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        String currentUserId = StrUtil.trim(securitySessionService.currentLoginIdOrNull());
+        fileDO.setUploadTime(now);
+        fileDO.setCreateBy(currentUserId);
+        fileDO.setUpdateBy(currentUserId);
+        fileDO.setDeleted(0);
+    }
+
     private FileRespVO toFileRespVO(File file) {
         FileRespVO respVO = new FileRespVO();
         respVO.setId(file.getId());
@@ -220,8 +274,7 @@ public class FileServiceImpl implements FileService {
         respVO.setType(file.getType());
         respVO.setSize(file.getSize());
         respVO.setCreateBy(file.getCreateBy());
-        respVO.setCreateTime(RequestDateTimeFormatter.format(file.getCreateTime()));
-        respVO.setUpdateTime(RequestDateTimeFormatter.format(file.getUpdateTime()));
+        respVO.setUploadTime(RequestDateTimeFormatter.format(file.getUploadTime()));
         return respVO;
     }
 

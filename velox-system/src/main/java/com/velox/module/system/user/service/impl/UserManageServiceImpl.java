@@ -94,6 +94,18 @@ public class UserManageServiceImpl implements UserManageService {
         if (StringUtils.hasText(query.getUserEmail())) {
             wrapper.like(User::getEmail, query.getUserEmail().trim());
         }
+        if (StringUtils.hasText(query.getCreateTimeStart())) {
+            wrapper.ge(User::getCreateTime, RequestDateTimeFormatter.parseToUtc(query.getCreateTimeStart()));
+        }
+        if (StringUtils.hasText(query.getCreateTimeEnd())) {
+            wrapper.le(User::getCreateTime, RequestDateTimeFormatter.parseToUtc(query.getCreateTimeEnd()));
+        }
+        if (StringUtils.hasText(query.getUpdateTimeStart())) {
+            wrapper.ge(User::getUpdateTime, RequestDateTimeFormatter.parseToUtc(query.getUpdateTimeStart()));
+        }
+        if (StringUtils.hasText(query.getUpdateTimeEnd())) {
+            wrapper.le(User::getUpdateTime, RequestDateTimeFormatter.parseToUtc(query.getUpdateTimeEnd()));
+        }
         if (StringUtils.hasText(query.getUserGender())) {
             List<String> genderUserIds = profileMapper.selectList(new LambdaQueryWrapper<Profile>()
                             .eq(Profile::getDeleted, 0)

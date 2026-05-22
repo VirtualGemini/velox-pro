@@ -19,7 +19,9 @@ import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.auth.dto.CaptchaDTO;
+import com.velox.module.system.auth.dto.CodeLoginCommand;
 import com.velox.module.system.auth.dto.ForgotPasswordCodeCommand;
+import com.velox.module.system.auth.dto.LoginCodeSendCommand;
 import com.velox.module.system.auth.dto.LoginCommand;
 import com.velox.module.system.auth.dto.RegisterCommand;
 import com.velox.module.system.auth.dto.ResetPasswordCommand;
@@ -34,6 +36,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class LoginServiceImpl implements LoginService {
+
+    private static final java.util.regex.Pattern PHONE_PATTERN = java.util.regex.Pattern.compile("^1[3-9]\\d{9}$");
+    private static final java.util.regex.Pattern EMAIL_PATTERN = java.util.regex.Pattern.compile(
+            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     private final UserMapper userMapper;
     private final ProfileMapper profileMapper;
@@ -101,11 +107,7 @@ public class LoginServiceImpl implements LoginService {
             throw new ApiException(BusinessErrorCode.LOGIN_FAILED);
         }
 
-        User user = userMapper.selectOne(
-            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
-                .eq(User::getDeleted, 0)
-                .eq(User::getUsername, username)
-        );
+        User user = findUserByAccount(username);
 
         if (user == null) {
             throw new ApiException(BusinessErrorCode.LOGIN_FAILED);
@@ -258,6 +260,96 @@ public class LoginServiceImpl implements LoginService {
         activeUserStatusService.recordLogout(userId);
     }
 
+    @Override
+    public void sendLoginCode(LoginCodeSendCommand command) {
+        String type = command.getType() == null ? "" : command.getType().trim().toLowerCase();
+        if ("phone".equals(type)) {
+            // 手机号验证码登录：占位，未来接入短信能力时再实现。
+            throw new ApiException(BusinessErrorCode.PHONE_LOGIN_NOT_SUPPORTED);
+        }
+        if (!"email".equals(type)) {
+            throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
+        }
+
+        String email = normalizeEmail(command.getTarget());
+        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
+        }
+
+        User user = findUserByEmail(email);
+        if (user == null) {
+            throw new ApiException(BusinessErrorCode.EMAIL_NOT_BOUND);
+        }
+
+        EmailBuilder emailBuilder = requireEmailBuilder();
+        String code = RandomUtil.randomNumbers(6);
+        if (!verificationCodeStore.trySaveLoginCode(email, code)) {
+            throw new ApiException(BusinessErrorCode.LOGIN_CODE_SEND_TOO_FREQUENT);
+        }
+        try {
+            SendResponse response = emailBuilder.to(email)
+                    .subject("登录验证码")
+                    .text(buildLoginCodeMailContent(user.getUsername(), code))
+                    .sendSync();
+            if (!response.success()) {
+                verificationCodeStore.invalidateLoginCode(email);
+                if (response.errorCode() == EmailErrorCode.DISABLED.code()) {
+                    throw new ApiException(BusinessErrorCode.EMAIL_SERVICE_DISABLED);
+                }
+                throw new ApiException(BusinessErrorCode.EMAIL_SEND_FAILED);
+            }
+        } catch (ApiException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            verificationCodeStore.invalidateLoginCode(email);
+            throw new ApiException(exception, BusinessErrorCode.EMAIL_SEND_FAILED);
+        }
+    }
+
+    @Override
+    public TokenDTO loginByCode(CodeLoginCommand command) {
+        String type = command.getType() == null ? "" : command.getType().trim().toLowerCase();
+        if ("phone".equals(type)) {
+            throw new ApiException(BusinessErrorCode.PHONE_LOGIN_NOT_SUPPORTED);
+        }
+        if (!"email".equals(type)) {
+            throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
+        }
+
+        String email = normalizeEmail(command.getTarget());
+        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
+        }
+
+        User user = findUserByEmail(email);
+        if (user == null) {
+            throw new ApiException(BusinessErrorCode.EMAIL_NOT_BOUND);
+        }
+
+        checkLoginLock(user);
+
+        VerificationCodeStore.VerificationResult verificationResult =
+                verificationCodeStore.verifyLoginCode(email, command.getCode());
+        if (verificationResult == VerificationCodeStore.VerificationResult.EXPIRED) {
+            throw new ApiException(BusinessErrorCode.LOGIN_CODE_EXPIRED);
+        }
+        if (verificationResult == VerificationCodeStore.VerificationResult.INVALID) {
+            increaseLoginFailCount(user);
+            throw new ApiException(BusinessErrorCode.LOGIN_CODE_ERROR);
+        }
+
+        if (Integer.valueOf(4).equals(user.getStatus())) {
+            throw new ApiException(BusinessErrorCode.ACCOUNT_DISABLED);
+        }
+
+        resetLoginFailCount(user);
+
+        String token = securitySessionService.login(user.getId());
+        activeUserStatusService.recordLogin(user.getId());
+
+        return new TokenDTO(token, null);
+    }
+
     private void validateCaptchaIfPresent(String captchaCode, String key) {
         boolean captchaCodeBlank = captchaCode == null || captchaCode.isBlank();
         boolean keyBlank = key == null || key.isBlank();
@@ -334,6 +426,41 @@ public class LoginServiceImpl implements LoginService {
         );
     }
 
+    /**
+     * 登录支持账号、手机号、邮箱三选一匹配。
+     */
+    private User findUserByAccount(String account) {
+        String trimmed = account.trim();
+
+        User user = userMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                        .eq(User::getDeleted, 0)
+                        .eq(User::getUsername, trimmed)
+                        .last("limit 1")
+        );
+        if (user != null) {
+            return user;
+        }
+
+        if (PHONE_PATTERN.matcher(trimmed).matches()) {
+            user = userMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                            .eq(User::getDeleted, 0)
+                            .eq(User::getPhone, trimmed)
+                            .last("limit 1")
+            );
+            if (user != null) {
+                return user;
+            }
+        }
+
+        String lower = trimmed.toLowerCase();
+        if (EMAIL_PATTERN.matcher(lower).matches()) {
+            user = findUserByEmail(lower);
+        }
+        return user;
+    }
+
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {
             return null;
@@ -347,6 +474,14 @@ public class LoginServiceImpl implements LoginService {
                 + "本次密码重置验证码为：" + code + "\n"
                 + "验证码 10 分钟内有效，请勿泄露给他人。\n\n"
                 + "如果这不是您的操作，请忽略本邮件。";
+    }
+
+    private String buildLoginCodeMailContent(String username, String code) {
+        return "您好，" + username + "：\n\n"
+                + "您正在通过邮箱验证码登录。\n"
+                + "本次登录验证码为：" + code + "\n"
+                + "验证码 10 分钟内有效，请勿泄露给他人。\n\n"
+                + "如果这不是您的操作，请尽快修改密码。";
     }
 
     private EmailBuilder requireEmailBuilder() {

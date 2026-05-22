@@ -8,8 +8,23 @@ public class FilePageReqVO {
     @Schema(description = "文件路径", example = "upload/2024/01")
     private String path;
 
+    @Schema(description = "文件名", example = "report.md")
+    private String name;
+
     @Schema(description = "文件类型", example = "image/jpeg")
     private String type;
+
+    @Schema(description = "文件大小最小值(字节)", example = "1024")
+    private Long sizeMinBytes;
+
+    @Schema(description = "文件大小最大值(字节)", example = "1048576")
+    private Long sizeMaxBytes;
+
+    @Schema(description = "上传开始时间", example = "2026-05-22 10:00:00")
+    private String uploadTimeStart;
+
+    @Schema(description = "上传结束时间", example = "2026-05-22 18:00:00")
+    private String uploadTimeEnd;
 
     @Schema(description = "页码", example = "1")
     private Integer page = 1;
@@ -25,12 +40,52 @@ public class FilePageReqVO {
         this.path = path;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getType() {
         return type;
     }
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public Long getSizeMinBytes() {
+        return sizeMinBytes;
+    }
+
+    public void setSizeMinBytes(Long sizeMinBytes) {
+        this.sizeMinBytes = sizeMinBytes;
+    }
+
+    public Long getSizeMaxBytes() {
+        return sizeMaxBytes;
+    }
+
+    public void setSizeMaxBytes(Long sizeMaxBytes) {
+        this.sizeMaxBytes = sizeMaxBytes;
+    }
+
+    public String getUploadTimeStart() {
+        return uploadTimeStart;
+    }
+
+    public void setUploadTimeStart(String uploadTimeStart) {
+        this.uploadTimeStart = uploadTimeStart;
+    }
+
+    public String getUploadTimeEnd() {
+        return uploadTimeEnd;
+    }
+
+    public void setUploadTimeEnd(String uploadTimeEnd) {
+        this.uploadTimeEnd = uploadTimeEnd;
     }
 
     public Integer getPage() {

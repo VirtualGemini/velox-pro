@@ -8,10 +8,10 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "登录请求")
 public class LoginCommand {
 
-    @Schema(description = "用户名", example = "admin")
-    @JsonAlias("userName")
-    @NotBlank(message = "用户名不能为空")
-    @Size(min = 3, max = 20, message = "用户名长度必须在3-20个字符之间")
+    @Schema(description = "用户名/手机号/邮箱", example = "admin")
+    @JsonAlias({"userName", "account"})
+    @NotBlank(message = "账号不能为空")
+    @Size(min = 3, max = 64, message = "账号长度必须在3-64个字符之间")
     private String username;
 
     @Schema(description = "密码", example = "123456")

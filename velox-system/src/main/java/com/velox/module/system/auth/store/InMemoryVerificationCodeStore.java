@@ -15,6 +15,7 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
     private final Map<String, ExpiringValue> store = new ConcurrentHashMap<>();
     private final AtomicInteger operationCounter = new AtomicInteger();
     private final Object resetCodeMutex = new Object();
+    private final Object loginCodeMutex = new Object();
 
     public InMemoryVerificationCodeStore(SecurityProperties securityProperties) {
         super(securityProperties);
@@ -73,6 +74,45 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
     @Override
     public boolean resetCodeExists(String email) {
         return get(RESET_PREFIX + email) != null;
+    }
+
+    @Override
+    public boolean trySaveLoginCode(String target, String code) {
+        synchronized (loginCodeMutex) {
+            cleanupExpiredEntriesIfNeeded();
+            if (peek(LOGIN_CODE_SENT_PREFIX + target) != null) {
+                return false;
+            }
+            put(
+                    LOGIN_CODE_PREFIX + target,
+                    digest(code),
+                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeTtlSeconds())
+            );
+            put(
+                    LOGIN_CODE_SENT_PREFIX + target,
+                    "1",
+                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+            );
+            return true;
+        }
+    }
+
+    @Override
+    public void invalidateLoginCode(String target) {
+        synchronized (loginCodeMutex) {
+            store.remove(LOGIN_CODE_PREFIX + target);
+            store.remove(LOGIN_CODE_SENT_PREFIX + target);
+        }
+    }
+
+    @Override
+    public VerificationResult verifyLoginCode(String target, String code) {
+        return compareAndDeleteIfMatch(LOGIN_CODE_PREFIX + target, digest(code));
+    }
+
+    @Override
+    public boolean loginCodeExists(String target) {
+        return get(LOGIN_CODE_PREFIX + target) != null;
     }
 
     private void put(String key, String value, Duration ttl) {
