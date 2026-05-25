@@ -39,6 +39,9 @@ velox:
           - table: sys_file_content
             id-column: id
             business-type: sys_file_content
+          - table: sys_user_security
+            id-column: id
+            business-type: sys_user_security
         # 声明式引用图：只有这里注册的引用列才会跟随身份域一起迁移
         references:
           - table: sys_user
@@ -142,6 +145,17 @@ velox:
               - column: config_id
                 target-business-type: sys_file_config
                 kind: explicit
+              - column: create_by
+                target-business-type: sys_user
+                kind: audit
+              - column: update_by
+                target-business-type: sys_user
+                kind: audit
+          - table: sys_user_security
+            mappings:
+              - column: user_id
+                target-business-type: sys_user
+                kind: fk
               - column: create_by
                 target-business-type: sys_user
                 kind: audit

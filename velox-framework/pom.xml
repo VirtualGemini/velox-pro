@@ -21,5 +21,6 @@
         <module>velox-email-spring-boot-starter</module>
         <module>velox-id-spring-boot-starter</module>
         <module>velox-redis-spring-boot-starter</module>
+        <module>velox-totp-spring-boot-starter</module>
     </modules>
 </project>

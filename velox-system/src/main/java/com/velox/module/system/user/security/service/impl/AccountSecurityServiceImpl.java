@@ -9,6 +9,7 @@ import com.velox.email.api.message.SendResponse;
 import com.velox.email.common.error.EmailErrorCode;
 import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.service.PasswordCipherService;
 import com.velox.module.system.auth.store.VerificationCodeStore;
 import com.velox.module.system.domain.model.User;
 import com.velox.module.system.domain.model.UserSecurity;
@@ -16,11 +17,19 @@ import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.UserSecurityMapper;
 import com.velox.module.system.user.security.dto.EmailRebindCommand;
+import com.velox.module.system.user.security.dto.EmailRebindProofDTO;
+import com.velox.module.system.user.security.dto.EmailRebindProofVerifyCommand;
 import com.velox.module.system.user.security.dto.EmailRebindSendCodeCommand;
 import com.velox.module.system.user.security.dto.LoginMethodsUpdateCommand;
 import com.velox.module.system.user.security.dto.MfaEmailUpdateCommand;
+import com.velox.module.system.user.security.dto.MfaTotpDisableCommand;
+import com.velox.module.system.user.security.dto.MfaTotpEnableCommand;
+import com.velox.module.system.user.security.dto.MfaTotpProvisionDTO;
 import com.velox.module.system.user.security.dto.SecurityStatusDTO;
 import com.velox.module.system.user.security.service.AccountSecurityService;
+import com.velox.totp.api.model.TotpProvisioning;
+import com.velox.totp.api.model.TotpVerifyResult;
+import com.velox.totp.api.service.TotpService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +42,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,6 +54,11 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final DateTimeFormatter ISO_FMT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final String REBIND_SCENE = "email_rebind";
+    private static final String REBIND_PROOF_SCOPE = "email-proof";
+    private static final String REBIND_PROOF_TYPE_CURRENT_EMAIL_CODE = "current_email_code";
+    private static final String REBIND_PROOF_TYPE_TOTP = "totp";
+    private static final String REBIND_PROOF_TYPE_PASSWORD = "password";
 
     private final UserMapper userMapper;
     private final UserSecurityMapper userSecurityMapper;
@@ -51,6 +67,8 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
     private final SystemEntityIdGenerator entityIdGenerator;
     private final VerificationCodeStore verificationCodeStore;
     private final ObjectProvider<EmailBuilder> emailBuilderProvider;
+    private final PasswordCipherService passwordCipherService;
+    private final TotpService totpService;
 
     public AccountSecurityServiceImpl(
             UserMapper userMapper,
@@ -59,7 +77,9 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
             SecurityProperties securityProperties,
             SystemEntityIdGenerator entityIdGenerator,
             VerificationCodeStore verificationCodeStore,
-            ObjectProvider<EmailBuilder> emailBuilderProvider) {
+            ObjectProvider<EmailBuilder> emailBuilderProvider,
+            PasswordCipherService passwordCipherService,
+            TotpService totpService) {
         this.userMapper = userMapper;
         this.userSecurityMapper = userSecurityMapper;
         this.securitySessionService = securitySessionService;
@@ -67,6 +87,8 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         this.entityIdGenerator = entityIdGenerator;
         this.verificationCodeStore = verificationCodeStore;
         this.emailBuilderProvider = emailBuilderProvider;
+        this.passwordCipherService = passwordCipherService;
+        this.totpService = totpService;
     }
 
     @Override
@@ -105,9 +127,78 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
     }
 
     @Override
+    public void sendEmailRebindProofCode() {
+        String userId = securitySessionService.requireCurrentLoginId();
+        User user = requireUser(userId);
+        String currentEmail = normalizeEmail(user.getEmail());
+        if (currentEmail == null || !EMAIL_PATTERN.matcher(currentEmail).matches()) {
+            throw new ApiException(BusinessErrorCode.EMAIL_NOT_BOUND_TO_USER);
+        }
+
+        EmailBuilder emailBuilder = requireEmailBuilder();
+        SecurityProperties.Account.Rebind.Email rebindConfig = securityProperties.getAccount().getRebind().getEmail();
+        String code = RandomUtil.randomNumbers(6);
+        if (!verificationCodeStore.trySaveRebindCode(
+                REBIND_PROOF_SCOPE,
+                currentEmail,
+                code,
+                rebindConfig.getCodeTtlSeconds(),
+                rebindConfig.getResendIntervalSeconds())) {
+            throw new ApiException(BusinessErrorCode.REBIND_CODE_SEND_TOO_FREQUENT);
+        }
+        try {
+            SendResponse response = emailBuilder.to(currentEmail)
+                    .subject("邮箱换绑身份验证")
+                    .text(buildCurrentEmailProofContent(user.getUsername(), code))
+                    .sendSync();
+            if (!response.success()) {
+                verificationCodeStore.invalidateRebindCode(REBIND_PROOF_SCOPE, currentEmail);
+                if (response.errorCode() == EmailErrorCode.DISABLED.code()) {
+                    throw new ApiException(BusinessErrorCode.EMAIL_SERVICE_DISABLED);
+                }
+                throw new ApiException(BusinessErrorCode.EMAIL_SEND_FAILED);
+            }
+        } catch (ApiException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            verificationCodeStore.invalidateRebindCode(REBIND_PROOF_SCOPE, currentEmail);
+            throw new ApiException(ex, BusinessErrorCode.EMAIL_SEND_FAILED);
+        }
+    }
+
+    @Override
+    public EmailRebindProofDTO verifyEmailRebindProof(EmailRebindProofVerifyCommand command) {
+        String userId = securitySessionService.requireCurrentLoginId();
+        User user = requireUser(userId);
+        UserSecurity security = getOrInitSecurity(user);
+        String expectedProofType = resolveRebindProofType(user, security);
+        String actualProofType = normalizeProofType(command.getProofType());
+        if (!expectedProofType.equals(actualProofType)) {
+            throw new ApiException(BusinessErrorCode.REBIND_PROOF_TYPE_MISMATCH);
+        }
+
+        switch (expectedProofType) {
+            case REBIND_PROOF_TYPE_CURRENT_EMAIL_CODE -> verifyCurrentEmailProof(user, command.getCurrentEmailCode());
+            case REBIND_PROOF_TYPE_TOTP -> verifyTotpProof(security, command.getTotpCode());
+            case REBIND_PROOF_TYPE_PASSWORD -> verifyPasswordProof(user, command.getCurrentPassword());
+            default -> throw new ApiException(BusinessErrorCode.REBIND_PROOF_TYPE_MISMATCH);
+        }
+
+        int proofTtlSeconds = securityProperties.getAccount().getMfa().getEmail().getChallengeTtlSeconds();
+        String proofTicket = UUID.randomUUID().toString().replace("-", "");
+        verificationCodeStore.saveProofTicket(REBIND_SCENE, proofTicket, userId, proofTtlSeconds);
+
+        EmailRebindProofDTO dto = new EmailRebindProofDTO();
+        dto.setProofTicket(proofTicket);
+        dto.setExpiresInSeconds(proofTtlSeconds);
+        return dto;
+    }
+
+    @Override
     public void sendEmailRebindCode(EmailRebindSendCodeCommand command) {
         String userId = securitySessionService.requireCurrentLoginId();
         User user = requireUser(userId);
+        requireRebindProof(userId, command.getProofTicket());
         String newEmail = normalizeEmail(command.getNewEmail());
         if (newEmail == null || !EMAIL_PATTERN.matcher(newEmail).matches()) {
             throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
@@ -155,6 +246,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
     public Boolean rebindEmail(EmailRebindCommand command) {
         String userId = securitySessionService.requireCurrentLoginId();
         User user = requireUser(userId);
+        requireRebindProof(userId, command.getProofTicket());
         String newEmail = normalizeEmail(command.getNewEmail());
         if (newEmail == null || !EMAIL_PATTERN.matcher(newEmail).matches()) {
             throw new ApiException(BusinessErrorCode.EMAIL_REQUIRED);
@@ -171,13 +263,14 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         }
 
         VerificationCodeStore.VerificationResult result =
-                verificationCodeStore.verifyRebindCode("email", newEmail, command.getCode());
+                verificationCodeStore.verifyRebindCode("email", newEmail, command.getNewEmailCode());
         if (result == VerificationCodeStore.VerificationResult.EXPIRED) {
             throw new ApiException(BusinessErrorCode.REBIND_CODE_EXPIRED);
         }
         if (result == VerificationCodeStore.VerificationResult.INVALID) {
             throw new ApiException(BusinessErrorCode.REBIND_CODE_ERROR);
         }
+        consumeRebindProof(userId, command.getProofTicket());
 
         user.setEmail(newEmail);
         user.setUpdateBy(userId);
@@ -275,6 +368,9 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
 
         UserSecurity security = getOrInitSecurity(user);
         if (Boolean.TRUE.equals(enabled)) {
+            if (Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+                throw new ApiException(BusinessErrorCode.MFA_ALREADY_ENABLED);
+            }
             String email = normalizeEmail(user.getEmail());
             if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
                 throw new ApiException(BusinessErrorCode.EMAIL_NOT_BOUND_TO_USER);
@@ -294,6 +390,85 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         } else {
             security.setMfaEmailEnabled(0);
         }
+        security.setUpdateBy(userId);
+        saveSecurity(security);
+        return true;
+    }
+
+    @Override
+    public MfaTotpProvisionDTO provisionMfaTotp() {
+        if (!totpService.isEnabled()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_SERVICE_DISABLED);
+        }
+        String userId = securitySessionService.requireCurrentLoginId();
+        User user = requireUser(userId);
+        UserSecurity security = getOrInitSecurity(user);
+        if (Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_ALREADY_ENABLED);
+        }
+
+        String accountName = StringUtils.hasText(user.getEmail()) ? user.getEmail() : user.getUsername();
+        TotpProvisioning provisioning = totpService.provision(accountName);
+        MfaTotpProvisionDTO dto = new MfaTotpProvisionDTO();
+        dto.setSecret(provisioning.secret().base32());
+        dto.setOtpAuthUri(provisioning.otpAuthUri());
+        dto.setIssuer(provisioning.issuer());
+        dto.setAccountName(provisioning.accountName());
+        dto.setDigits(provisioning.secret().digits());
+        dto.setPeriodSeconds(provisioning.secret().periodSeconds());
+        dto.setAlgorithm(provisioning.secret().algorithm().name());
+        return dto;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean enableMfaTotp(MfaTotpEnableCommand command) {
+        if (!totpService.isEnabled()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_SERVICE_DISABLED);
+        }
+        String userId = securitySessionService.requireCurrentLoginId();
+        User user = requireUser(userId);
+        UserSecurity security = getOrInitSecurity(user);
+        if (Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_ALREADY_ENABLED);
+        }
+
+        TotpVerifyResult result = totpService.verify(command.getSecret(), command.getCode());
+        if (!result.matched()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_CODE_ERROR);
+        }
+
+        security.setMfaTotpEnabled(1);
+        security.setMfaTotpSecret(command.getSecret());
+        security.setUpdateBy(userId);
+        saveSecurity(security);
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean disableMfaTotp(MfaTotpDisableCommand command) {
+        String userId = securitySessionService.requireCurrentLoginId();
+        User user = requireUser(userId);
+        UserSecurity security = getOrInitSecurity(user);
+        if (!Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_NOT_ENABLED);
+        }
+        if (!StringUtils.hasText(security.getMfaTotpSecret())) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_NOT_PROVISIONED);
+        }
+        if (!totpService.isEnabled()) {
+            // 关闭路径即使能力被运维下线，也允许凭口令解绑 —— 但需要服务可用才能校验。
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_SERVICE_DISABLED);
+        }
+
+        TotpVerifyResult result = totpService.verify(security.getMfaTotpSecret(), command.getCode());
+        if (!result.matched()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_CODE_ERROR);
+        }
+
+        security.setMfaTotpEnabled(0);
+        security.setMfaTotpSecret(null);
         security.setUpdateBy(userId);
         saveSecurity(security);
         return true;
@@ -356,6 +531,80 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         return email.trim().toLowerCase();
     }
 
+    private String normalizeProofType(String proofType) {
+        if (!StringUtils.hasText(proofType)) {
+            return "";
+        }
+        return proofType.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String resolveRebindProofType(User user, UserSecurity security) {
+        if (StringUtils.hasText(normalizeEmail(user.getEmail()))) {
+            return REBIND_PROOF_TYPE_CURRENT_EMAIL_CODE;
+        }
+        if (Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+            return REBIND_PROOF_TYPE_TOTP;
+        }
+        return REBIND_PROOF_TYPE_PASSWORD;
+    }
+
+    private void verifyCurrentEmailProof(User user, String currentEmailCode) {
+        String currentEmail = normalizeEmail(user.getEmail());
+        if (currentEmail == null || !EMAIL_PATTERN.matcher(currentEmail).matches()) {
+            throw new ApiException(BusinessErrorCode.EMAIL_NOT_BOUND_TO_USER);
+        }
+        VerificationCodeStore.VerificationResult result =
+                verificationCodeStore.verifyRebindCode(REBIND_PROOF_SCOPE, currentEmail, currentEmailCode);
+        if (result == VerificationCodeStore.VerificationResult.EXPIRED) {
+            throw new ApiException(BusinessErrorCode.REBIND_CURRENT_EMAIL_CODE_EXPIRED);
+        }
+        if (result == VerificationCodeStore.VerificationResult.INVALID) {
+            throw new ApiException(BusinessErrorCode.REBIND_CURRENT_EMAIL_CODE_ERROR);
+        }
+    }
+
+    private void verifyTotpProof(UserSecurity security, String totpCode) {
+        if (!Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_NOT_ENABLED);
+        }
+        if (!StringUtils.hasText(security.getMfaTotpSecret())) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_NOT_PROVISIONED);
+        }
+        if (!totpService.isEnabled()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_SERVICE_DISABLED);
+        }
+        TotpVerifyResult result = totpService.verify(security.getMfaTotpSecret(), totpCode);
+        if (!result.matched()) {
+            throw new ApiException(BusinessErrorCode.MFA_TOTP_CODE_ERROR);
+        }
+    }
+
+    private void verifyPasswordProof(User user, String currentPassword) {
+        if (!passwordCipherService.matches(currentPassword, user.getPassword())) {
+            throw new ApiException(BusinessErrorCode.REBIND_PASSWORD_ERROR);
+        }
+    }
+
+    private void requireRebindProof(String userId, String proofTicket) {
+        if (!StringUtils.hasText(proofTicket)) {
+            throw new ApiException(BusinessErrorCode.REBIND_PROOF_REQUIRED);
+        }
+        String storedUserId = verificationCodeStore.peekProofTicket(REBIND_SCENE, proofTicket.trim());
+        if (!userId.equals(storedUserId)) {
+            throw new ApiException(BusinessErrorCode.REBIND_PROOF_INVALID);
+        }
+    }
+
+    private void consumeRebindProof(String userId, String proofTicket) {
+        if (!StringUtils.hasText(proofTicket)) {
+            throw new ApiException(BusinessErrorCode.REBIND_PROOF_REQUIRED);
+        }
+        String storedUserId = verificationCodeStore.consumeProofTicket(REBIND_SCENE, proofTicket.trim());
+        if (!userId.equals(storedUserId)) {
+            throw new ApiException(BusinessErrorCode.REBIND_PROOF_INVALID);
+        }
+    }
+
     private String maskEmail(String email) {
         if (!StringUtils.hasText(email)) {
             return "";
@@ -390,6 +639,14 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
                 + "本次换绑验证码为：" + code + "\n"
                 + "验证码 10 分钟内有效，请勿泄露给他人。\n\n"
                 + "如果这不是您的操作，请忽略本邮件并修改密码。";
+    }
+
+    private String buildCurrentEmailProofContent(String username, String code) {
+        return "您好，" + username + "：\n\n"
+                + "您正在验证当前身份，以继续执行邮箱换绑。\n"
+                + "本次验证码为：" + code + "\n"
+                + "验证码 10 分钟内有效，请勿泄露给他人。\n\n"
+                + "如果这不是您的操作，请忽略本邮件并尽快修改密码。";
     }
 
     private String buildMfaCodeContent(String username, String code) {

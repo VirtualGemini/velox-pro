@@ -13,7 +13,11 @@ public class EmailRebindCommand {
 
     @NotBlank
     @Size(max = 12)
-    private String code;
+    private String newEmailCode;
+
+    @NotBlank
+    @Size(max = 128)
+    private String proofTicket;
 
     public String getNewEmail() {
         return newEmail;
@@ -23,11 +27,19 @@ public class EmailRebindCommand {
         this.newEmail = newEmail;
     }
 
-    public String getCode() {
-        return code;
+    public String getNewEmailCode() {
+        return newEmailCode;
     }
 
-    public void setCode(String code) {
-        this.code = code;
+    public void setNewEmailCode(String newEmailCode) {
+        this.newEmailCode = newEmailCode;
+    }
+
+    public String getProofTicket() {
+        return proofTicket;
+    }
+
+    public void setProofTicket(String proofTicket) {
+        this.proofTicket = proofTicket;
     }
 }

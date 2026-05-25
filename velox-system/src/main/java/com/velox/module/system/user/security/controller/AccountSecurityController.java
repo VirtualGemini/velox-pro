@@ -3,9 +3,14 @@ package com.velox.module.system.user.security.controller;
 import com.velox.common.result.Result;
 import com.velox.framework.security.api.annotation.RequirePermission;
 import com.velox.module.system.user.security.dto.EmailRebindCommand;
+import com.velox.module.system.user.security.dto.EmailRebindProofDTO;
+import com.velox.module.system.user.security.dto.EmailRebindProofVerifyCommand;
 import com.velox.module.system.user.security.dto.EmailRebindSendCodeCommand;
 import com.velox.module.system.user.security.dto.LoginMethodsUpdateCommand;
 import com.velox.module.system.user.security.dto.MfaEmailUpdateCommand;
+import com.velox.module.system.user.security.dto.MfaTotpDisableCommand;
+import com.velox.module.system.user.security.dto.MfaTotpEnableCommand;
+import com.velox.module.system.user.security.dto.MfaTotpProvisionDTO;
 import com.velox.module.system.user.security.dto.SecurityStatusDTO;
 import com.velox.module.system.user.security.service.AccountSecurityService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +39,22 @@ public class AccountSecurityController {
     @RequirePermission("system:user-center:security-query")
     public Result<SecurityStatusDTO> getStatus() {
         return Result.ok(accountSecurityService.getStatus());
+    }
+
+    @Operation(summary = "发送邮箱换绑前置验证验证码")
+    @PostMapping("/email/rebind/proof/send-code")
+    @RequirePermission("system:user-center:email-rebind")
+    public Result<Void> sendEmailRebindProofCode() {
+        accountSecurityService.sendEmailRebindProofCode();
+        return Result.ok();
+    }
+
+    @Operation(summary = "校验邮箱换绑前置验证")
+    @PostMapping("/email/rebind/proof/verify")
+    @RequirePermission("system:user-center:email-rebind")
+    public Result<EmailRebindProofDTO> verifyEmailRebindProof(
+            @Valid @RequestBody EmailRebindProofVerifyCommand command) {
+        return Result.ok(accountSecurityService.verifyEmailRebindProof(command));
     }
 
     @Operation(summary = "发送邮箱换绑验证码")
@@ -71,5 +92,26 @@ public class AccountSecurityController {
     @RequirePermission("system:user-center:mfa-update")
     public Result<Boolean> updateMfaEmail(@Valid @RequestBody MfaEmailUpdateCommand command) {
         return Result.ok(accountSecurityService.updateMfaEmail(command));
+    }
+
+    @Operation(summary = "拉取 TOTP 绑定材料（密钥与二维码 URI）")
+    @PostMapping("/mfa/totp/provision")
+    @RequirePermission("system:user-center:mfa-update")
+    public Result<MfaTotpProvisionDTO> provisionMfaTotp() {
+        return Result.ok(accountSecurityService.provisionMfaTotp());
+    }
+
+    @Operation(summary = "完成 TOTP 绑定")
+    @PutMapping("/mfa/totp/enable")
+    @RequirePermission("system:user-center:mfa-update")
+    public Result<Boolean> enableMfaTotp(@Valid @RequestBody MfaTotpEnableCommand command) {
+        return Result.ok(accountSecurityService.enableMfaTotp(command));
+    }
+
+    @Operation(summary = "解绑 TOTP")
+    @PutMapping("/mfa/totp/disable")
+    @RequirePermission("system:user-center:mfa-update")
+    public Result<Boolean> disableMfaTotp(@Valid @RequestBody MfaTotpDisableCommand command) {
+        return Result.ok(accountSecurityService.disableMfaTotp(command));
     }
 }

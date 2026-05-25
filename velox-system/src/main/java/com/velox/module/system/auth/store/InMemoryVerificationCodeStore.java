@@ -203,6 +203,30 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
         return value == null ? null : value.value();
     }
 
+    @Override
+    public void saveProofTicket(String scene, String proofTicket, String userId, int ttlSeconds) {
+        put(proofTicketKey(scene, proofTicket), userId, Duration.ofSeconds(ttlSeconds));
+    }
+
+    @Override
+    public String consumeProofTicket(String scene, String proofTicket) {
+        AtomicReference<String> result = new AtomicReference<>();
+        store.compute(proofTicketKey(scene, proofTicket), (ignored, existing) -> {
+            if (existing == null || existing.expiredAtMillis() <= System.currentTimeMillis()) {
+                return null;
+            }
+            result.set(existing.value());
+            return null;
+        });
+        return result.get();
+    }
+
+    @Override
+    public String peekProofTicket(String scene, String proofTicket) {
+        ExpiringValue value = peek(proofTicketKey(scene, proofTicket));
+        return value == null ? null : value.value();
+    }
+
     private void put(String key, String value, Duration ttl) {
         cleanupExpiredEntriesIfNeeded();
         store.put(key, new ExpiringValue(value, System.currentTimeMillis() + ttl.toMillis()));

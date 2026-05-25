@@ -18,6 +18,7 @@ abstract class AbstractVerificationCodeStore implements VerificationCodeStore {
     protected static final String MFA_CODE_PREFIX = "auth:mfa:email:";
     protected static final String MFA_CODE_SENT_PREFIX = "auth:mfa:email:sent:";
     protected static final String MFA_CHALLENGE_PREFIX = "auth:mfa:challenge:";
+    protected static final String PROOF_TICKET_PREFIX = "auth:proof:";
 
     protected final SecurityProperties securityProperties;
 
@@ -37,5 +38,9 @@ abstract class AbstractVerificationCodeStore implements VerificationCodeStore {
 
     protected String rebindSentKey(String scope, String target) {
         return REBIND_SENT_PREFIX + scope + ":" + target;
+    }
+
+    protected String proofTicketKey(String scene, String proofTicket) {
+        return PROOF_TICKET_PREFIX + scene + ":" + proofTicket;
     }
 }

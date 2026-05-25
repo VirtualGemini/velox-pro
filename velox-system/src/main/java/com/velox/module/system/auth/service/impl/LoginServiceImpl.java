@@ -36,6 +36,8 @@ import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
 import com.velox.module.system.persistence.UserSecurityMapper;
+import com.velox.totp.api.model.TotpVerifyResult;
+import com.velox.totp.api.service.TotpService;
 import com.wf.captcha.SpecCaptcha;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,7 @@ public class LoginServiceImpl implements LoginService {
     private final VerificationCodeStore verificationCodeStore;
     private final ActiveUserStatusService activeUserStatusService;
     private final SecuritySessionService securitySessionService;
+    private final TotpService totpService;
 
     public LoginServiceImpl(UserMapper userMapper,
                             ProfileMapper profileMapper,
@@ -79,7 +82,8 @@ public class LoginServiceImpl implements LoginService {
                             ObjectProvider<EmailBuilder> emailBuilderProvider,
                             VerificationCodeStore verificationCodeStore,
                             ActiveUserStatusService activeUserStatusService,
-                            SecuritySessionService securitySessionService) {
+                            SecuritySessionService securitySessionService,
+                            TotpService totpService) {
         this.userMapper = userMapper;
         this.profileMapper = profileMapper;
         this.roleMapper = roleMapper;
@@ -92,6 +96,7 @@ public class LoginServiceImpl implements LoginService {
         this.verificationCodeStore = verificationCodeStore;
         this.activeUserStatusService = activeUserStatusService;
         this.securitySessionService = securitySessionService;
+        this.totpService = totpService;
     }
 
     @Override
@@ -148,8 +153,9 @@ public class LoginServiceImpl implements LoginService {
         resetLoginFailCount(user);
         upgradePasswordIfNeeded(user, password);
 
-        if (shouldIssueMfaChallenge(security)) {
-            return issueMfaChallenge(user);
+        String mfaType = resolveMfaType(security, "password");
+        if (mfaType != null) {
+            return issueMfaChallenge(user, mfaType);
         }
 
         return performLogin(user);
@@ -376,8 +382,13 @@ public class LoginServiceImpl implements LoginService {
 
         resetLoginFailCount(user);
 
-        // 邮箱二段验证仅对密码登录生效：邮箱验证码登录本身已经验证过邮箱所有权，
-        // 再叠一次邮箱码既是冗余也是骚扰。
+        // 邮箱验证码登录天然完成了邮箱因素校验，因此跳过邮箱二段；
+        // 但 TOTP 是独立因素，仍需要继续走二段挑战。
+        String mfaType = resolveMfaType(security, "email_code");
+        if (mfaType != null) {
+            return issueMfaChallenge(user, mfaType);
+        }
+
         return performLogin(user);
     }
 
@@ -393,6 +404,14 @@ public class LoginServiceImpl implements LoginService {
                 .last("limit 1"));
         if (user == null) {
             throw new ApiException(BusinessErrorCode.USER_NOT_FOUND);
+        }
+        UserSecurity security = ensureUserSecurity(user);
+        // 仅当前挑战属于"邮箱二段"时才能下发；TOTP 由认证器生成，无需也不允许触发邮件。
+        if (Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_CHALLENGE_INVALID);
+        }
+        if (!Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
+            throw new ApiException(BusinessErrorCode.MFA_NOT_ENABLED);
         }
         String email = normalizeEmail(user.getEmail());
         if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
@@ -441,13 +460,27 @@ public class LoginServiceImpl implements LoginService {
             throw new ApiException(BusinessErrorCode.USER_NOT_FOUND);
         }
 
-        VerificationCodeStore.VerificationResult result =
-                verificationCodeStore.verifyMfaCode(userId, command.getCode());
-        if (result == VerificationCodeStore.VerificationResult.EXPIRED) {
-            throw new ApiException(BusinessErrorCode.MFA_CODE_EXPIRED);
-        }
-        if (result == VerificationCodeStore.VerificationResult.INVALID) {
-            throw new ApiException(BusinessErrorCode.MFA_CODE_ERROR);
+        UserSecurity security = ensureUserSecurity(user);
+        if (Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
+            if (!StringUtils.hasText(security.getMfaTotpSecret())) {
+                throw new ApiException(BusinessErrorCode.MFA_TOTP_NOT_PROVISIONED);
+            }
+            TotpVerifyResult totpResult = totpService.verify(security.getMfaTotpSecret(), command.getCode());
+            if (!totpResult.matched()) {
+                throw new ApiException(BusinessErrorCode.MFA_TOTP_CODE_ERROR);
+            }
+        } else if (Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
+            VerificationCodeStore.VerificationResult result =
+                    verificationCodeStore.verifyMfaCode(userId, command.getCode());
+            if (result == VerificationCodeStore.VerificationResult.EXPIRED) {
+                throw new ApiException(BusinessErrorCode.MFA_CODE_EXPIRED);
+            }
+            if (result == VerificationCodeStore.VerificationResult.INVALID) {
+                throw new ApiException(BusinessErrorCode.MFA_CODE_ERROR);
+            }
+        } else {
+            // 挑战已颁发但用户中途关闭了所有二段方式 —— 让挑战失效以保持一致性。
+            throw new ApiException(BusinessErrorCode.MFA_NOT_ENABLED);
         }
 
         verificationCodeStore.consumeMfaChallenge(command.getChallenge());
@@ -471,21 +504,39 @@ public class LoginServiceImpl implements LoginService {
         return new TokenDTO(token, null);
     }
 
-    private boolean shouldIssueMfaChallenge(UserSecurity security) {
-        SecurityProperties.Account.Mfa mfaConfig = securityProperties.getAccount().getMfa();
-        if (!mfaConfig.getEmail().isEnabled()) {
-            return false;
+    /**
+     * 解析当前登录方式下应该走的二段类型：
+     * - 优先 TOTP（独立因素，对所有登录方式生效）
+     * - 其次邮箱二段，但仅对密码登录生效（邮箱验证码登录本身已校验邮箱）
+     */
+    private String resolveMfaType(UserSecurity security, String loginMethod) {
+        if (security == null) {
+            return null;
         }
-        return security != null && Integer.valueOf(1).equals(security.getMfaEmailEnabled());
+        if (Integer.valueOf(1).equals(security.getMfaTotpEnabled()) && totpService.isEnabled()) {
+            return "totp";
+        }
+        SecurityProperties.Account.Mfa mfaConfig = securityProperties.getAccount().getMfa();
+        if ("password".equals(loginMethod)
+                && mfaConfig.getEmail().isEnabled()
+                && Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
+            return "email";
+        }
+        return null;
     }
 
-    private TokenDTO issueMfaChallenge(User user) {
+    private TokenDTO issueMfaChallenge(User user, String mfaType) {
         String challenge = IdUtil.simpleUUID();
         SecurityProperties.Account.Mfa.Email mfaConfig = securityProperties.getAccount().getMfa().getEmail();
         verificationCodeStore.saveMfaChallenge(challenge, user.getId(), mfaConfig.getChallengeTtlSeconds());
         TokenDTO dto = new TokenDTO();
         dto.setMfaChallenge(challenge);
-        dto.setMfaEmailMasked(maskEmail(user.getEmail()));
+        dto.setMfaType(mfaType);
+        if ("email".equals(mfaType)) {
+            dto.setMfaEmailMasked(maskEmail(user.getEmail()));
+        } else if ("totp".equals(mfaType)) {
+            dto.setMfaTotpDigits(6);
+        }
         return dto;
     }
 

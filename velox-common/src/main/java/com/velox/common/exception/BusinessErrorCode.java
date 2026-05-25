@@ -69,6 +69,17 @@ public enum BusinessErrorCode implements ErrorCode {
     PASSWORD_METHOD_REQUIRED(12038, "不允许关闭密码登录"),
     EMAIL_NOT_BOUND_TO_USER(12039, "当前账号未绑定邮箱"),
     LOGIN_METHOD_DISABLED(12040, "当前登录方式已被禁用"),
+    MFA_ALREADY_ENABLED(12041, "已开启另一种二段验证方式，请先关闭"),
+    MFA_TOTP_NOT_ENABLED(12042, "未开启 TOTP 二段验证"),
+    MFA_TOTP_CODE_ERROR(12043, "动态口令错误"),
+    MFA_TOTP_NOT_PROVISIONED(12044, "请先完成 TOTP 绑定"),
+    MFA_TOTP_SERVICE_DISABLED(12045, "TOTP 能力未启用，请联系管理员"),
+    REBIND_PROOF_REQUIRED(12046, "请先完成当前身份验证"),
+    REBIND_PROOF_INVALID(12047, "当前身份验证已失效，请重新验证"),
+    REBIND_PROOF_TYPE_MISMATCH(12048, "当前身份验证方式不匹配"),
+    REBIND_CURRENT_EMAIL_CODE_ERROR(12049, "当前邮箱验证码错误"),
+    REBIND_CURRENT_EMAIL_CODE_EXPIRED(12050, "当前邮箱验证码已过期"),
+    REBIND_PASSWORD_ERROR(12051, "当前密码错误"),
 
     // ---- 文件模块 (13000-13999) ----
     FILE_UPLOAD_FAILED(13000, "文件上传失败"),

@@ -83,6 +83,11 @@
             </dependency>
             <dependency>
                 <groupId>com.velox</groupId>
+                <artifactId>velox-totp-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.velox</groupId>
                 <artifactId>velox-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>

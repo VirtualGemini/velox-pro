@@ -58,6 +58,12 @@ public interface VerificationCodeStore {
 
     String peekMfaChallenge(String challengeToken);
 
+    void saveProofTicket(String scene, String proofTicket, String userId, int ttlSeconds);
+
+    String consumeProofTicket(String scene, String proofTicket);
+
+    String peekProofTicket(String scene, String proofTicket);
+
     enum VerificationResult {
         MATCHED,
         INVALID,

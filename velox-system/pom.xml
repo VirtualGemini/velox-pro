@@ -47,6 +47,10 @@
         </dependency>
         <dependency>
             <groupId>com.velox</groupId>
+            <artifactId>velox-totp-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.velox</groupId>
             <artifactId>velox-id-spring-boot-starter</artifactId>
         </dependency>
         <dependency>

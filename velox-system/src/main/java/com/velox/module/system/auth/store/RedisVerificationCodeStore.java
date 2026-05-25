@@ -210,6 +210,31 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
         return stringRedisTemplate.opsForValue().get(MFA_CHALLENGE_PREFIX + challengeToken);
     }
 
+    @Override
+    public void saveProofTicket(String scene, String proofTicket, String userId, int ttlSeconds) {
+        stringRedisTemplate.opsForValue().set(
+                proofTicketKey(scene, proofTicket),
+                userId,
+                Duration.ofSeconds(ttlSeconds)
+        );
+    }
+
+    @Override
+    public String consumeProofTicket(String scene, String proofTicket) {
+        String key = proofTicketKey(scene, proofTicket);
+        String userId = stringRedisTemplate.opsForValue().get(key);
+        if (userId == null) {
+            return null;
+        }
+        stringRedisTemplate.delete(key);
+        return userId;
+    }
+
+    @Override
+    public String peekProofTicket(String scene, String proofTicket) {
+        return stringRedisTemplate.opsForValue().get(proofTicketKey(scene, proofTicket));
+    }
+
     private VerificationResult executeConsumeAndCompare(String redisKey, String digestedCode) {
         Long result = stringRedisTemplate.execute(
                 CONSUME_AND_COMPARE_SCRIPT,

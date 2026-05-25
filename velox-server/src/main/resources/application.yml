@@ -21,7 +21,7 @@ spring:
     import: classpath:id.yml
   profiles:
     # 当前默认激活环境
-    active: local
+    active: dev
   application:
     # 应用名称
     name: velox
@@ -177,6 +177,49 @@ velox:
         secret: ${VELOX_SECURITY_JWT_SECRET:change-this-jwt-secret}
         # jwt 模式下是否回写响应头
         write-header: true
+    account:
+      login-methods:
+        # 全局允许的登录方式集合（用户层选择只能取该集合的子集）
+        enabled:
+          - password
+          - email_code
+        # 注册时初始化到 sys_user_security.login_methods 的默认值
+        defaults:
+          - password
+        # 是否禁止用户关闭密码登录
+        password-required: true
+      mfa:
+        email:
+          # 是否启用邮箱二段验证能力
+          enabled: true
+          # 邮箱二段验证码有效期（秒）
+          ttl-seconds: 300
+          # 重新发送间隔（秒）
+          resend-interval-seconds: 60
+          # 一段通过后下发的 challenge 令牌有效期（秒）
+          challenge-ttl-seconds: 300
+      rebind:
+        email:
+          # 邮箱换绑验证码有效期（秒）
+          code-ttl-seconds: 600
+          # 邮箱换绑验证码重发间隔（秒）
+          resend-interval-seconds: 60
+  # TOTP 动态口令能力（velox-totp-spring-boot-starter）
+  totp:
+    # 是否启用 TOTP 能力；false 时由 DisabledTotpService 兜底，所有绑定与校验接口将拒绝
+    enabled: true
+    # 二维码 / otpauth URI 中显示的发行方名称，建议使用产品名或租户名
+    issuer: ${velox.name:Velox}
+    # 口令位数（6/7/8 兼容主流认证器，常见值为 6）
+    digits: 6
+    # 时间步长（秒），RFC 6238 推荐 30
+    period-seconds: 30
+    # HMAC 算法（SHA1 兼容 Google / Microsoft / 腾讯 等仅支持 SHA1 的客户端）
+    algorithm: SHA1
+    # 生成新 secret 时的字节长度，SHA1 推荐 ≥ 20
+    secret-size-bytes: 20
+    # 校验时允许的相邻时间步数（1 表示当前窗口 ±1 步 / ±30 秒，补偿设备时钟漂移）
+    verify-window-steps: 1
 
 # 日志配置
 logging:

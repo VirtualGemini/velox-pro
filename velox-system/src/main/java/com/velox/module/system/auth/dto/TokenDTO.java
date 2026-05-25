@@ -9,10 +9,18 @@ public class TokenDTO {
      */
     private String mfaChallenge;
     /**
+     * 当前挑战需要走的二段方式："email" 或 "totp"。仅在返回 mfaChallenge 时设置。
+     */
+    private String mfaType;
+    /**
      * 二段验证目标邮箱（已脱敏），用于前端提示"将向 xxx 发送验证码"。
-     * 仅在返回 mfaChallenge 时设置。
+     * 仅在 mfaType=email 时设置。
      */
     private String mfaEmailMasked;
+    /**
+     * TOTP 期望的口令长度（位数），用于前端输入框约束。仅在 mfaType=totp 时设置。
+     */
+    private Integer mfaTotpDigits;
 
     public TokenDTO() {
     }
@@ -52,11 +60,27 @@ public class TokenDTO {
         this.mfaChallenge = mfaChallenge;
     }
 
+    public String getMfaType() {
+        return mfaType;
+    }
+
+    public void setMfaType(String mfaType) {
+        this.mfaType = mfaType;
+    }
+
     public String getMfaEmailMasked() {
         return mfaEmailMasked;
     }
 
     public void setMfaEmailMasked(String mfaEmailMasked) {
         this.mfaEmailMasked = mfaEmailMasked;
+    }
+
+    public Integer getMfaTotpDigits() {
+        return mfaTotpDigits;
+    }
+
+    public void setMfaTotpDigits(Integer mfaTotpDigits) {
+        this.mfaTotpDigits = mfaTotpDigits;
     }
 }

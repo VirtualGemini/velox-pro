@@ -11,11 +11,23 @@ public class EmailRebindSendCodeCommand {
     @Size(max = 100)
     private String newEmail;
 
+    @NotBlank
+    @Size(max = 128)
+    private String proofTicket;
+
     public String getNewEmail() {
         return newEmail;
     }
 
     public void setNewEmail(String newEmail) {
         this.newEmail = newEmail;
+    }
+
+    public String getProofTicket() {
+        return proofTicket;
+    }
+
+    public void setProofTicket(String proofTicket) {
+        this.proofTicket = proofTicket;
     }
 }
