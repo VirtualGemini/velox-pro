@@ -71,42 +71,6 @@ public class BusinessIdGenerator {
         return engine.metadata();
     }
 
-    public String nextUserId() {
-        return next(IdBusinessTypes.USER);
-    }
-
-    public String nextRoleId() {
-        return next(IdBusinessTypes.ROLE);
-    }
-
-    public String nextMenuId() {
-        return next(IdBusinessTypes.MENU);
-    }
-
-    public String nextProfileId() {
-        return next(IdBusinessTypes.PROFILE);
-    }
-
-    public String nextUserRoleId() {
-        return next(IdBusinessTypes.USER_ROLE);
-    }
-
-    public String nextRoleMenuPermissionId() {
-        return next(IdBusinessTypes.ROLE_MENU_PERMISSION);
-    }
-
-    public String nextFileConfigId() {
-        return next(IdBusinessTypes.FILE_CONFIG);
-    }
-
-    public String nextFileId() {
-        return next(IdBusinessTypes.FILE);
-    }
-
-    public String nextFileContentId() {
-        return next(IdBusinessTypes.FILE_CONTENT);
-    }
-
     private String normalizeBusinessType(String businessType) {
         return StringUtils.hasText(businessType) ? businessType.trim() : IdBusinessTypes.DEFAULT;
     }

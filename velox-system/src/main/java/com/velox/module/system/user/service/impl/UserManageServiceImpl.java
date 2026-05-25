@@ -8,13 +8,13 @@ import com.velox.module.system.domain.model.Profile;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.User;
 import com.velox.module.system.domain.model.UserRole;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.module.system.persistence.ProfileMapper;
 import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
 import com.velox.module.system.auth.service.PasswordCipherService;
 import com.velox.module.system.auth.status.ActiveUserStatusService;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.permission.service.PermissionService;
 import com.velox.framework.web.RequestDateTimeFormatter;
 import com.velox.module.system.user.dto.UserListItemDTO;
@@ -49,7 +49,7 @@ public class UserManageServiceImpl implements UserManageService {
     private final UserRoleMapper userRoleMapper;
     private final PasswordCipherService passwordCipherService;
     private final PermissionService permissionService;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final ActiveUserStatusService activeUserStatusService;
     private final SecuritySessionService securitySessionService;
 
@@ -59,7 +59,7 @@ public class UserManageServiceImpl implements UserManageService {
                                  UserRoleMapper userRoleMapper,
                                  PasswordCipherService passwordCipherService,
                                  PermissionService permissionService,
-                                 BusinessIdGenerator businessIdGenerator,
+                                 SystemEntityIdGenerator entityIdGenerator,
                                  ActiveUserStatusService activeUserStatusService,
                                  SecuritySessionService securitySessionService) {
         this.userMapper = userMapper;
@@ -68,7 +68,7 @@ public class UserManageServiceImpl implements UserManageService {
         this.userRoleMapper = userRoleMapper;
         this.passwordCipherService = passwordCipherService;
         this.permissionService = permissionService;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.activeUserStatusService = activeUserStatusService;
         this.securitySessionService = securitySessionService;
     }
@@ -176,7 +176,7 @@ public class UserManageServiceImpl implements UserManageService {
         String operator = currentOperator();
 
         User user = new User();
-        user.setId(businessIdGenerator.nextUserId());
+        user.setId(entityIdGenerator.nextId(User.class));
         user.setUsername(command.getUsername().trim());
         user.setPassword(passwordCipherService.encode(command.getPassword().trim()));
         user.setEmail(normalizeNullable(command.getEmail()));
@@ -414,7 +414,7 @@ public class UserManageServiceImpl implements UserManageService {
                 continue;
             }
             UserRole userRole = new UserRole();
-            userRole.setId(businessIdGenerator.nextUserRoleId());
+            userRole.setId(entityIdGenerator.nextId(UserRole.class));
             userRole.setUserId(userId);
             userRole.setRoleId(roleId);
             userRole.setDeleted(0);
@@ -440,7 +440,7 @@ public class UserManageServiceImpl implements UserManageService {
         }
 
         Profile created = new Profile();
-        created.setId(businessIdGenerator.nextProfileId());
+        created.setId(entityIdGenerator.nextId(Profile.class));
         created.setUserId(user.getId());
         created.setAvatar(buildDefaultAvatar(user.getUsername()));
         created.setDeleted(0);

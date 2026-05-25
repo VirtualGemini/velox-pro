@@ -9,9 +9,9 @@ import com.velox.module.system.persistence.MenuMapper;
 import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.RoleMenuPermissionMapper;
 import com.velox.module.system.persistence.support.MenuQuerySupport;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.framework.web.RequestDateTimeFormatter;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.permission.service.PermissionService;
 import com.velox.module.system.menu.dto.AuthItemDTO;
 import com.velox.module.system.menu.dto.MenuMetaDTO;
@@ -45,7 +45,7 @@ public class MenuServiceImpl implements MenuService {
     private final RoleMapper roleMapper;
     private final RoleMenuPermissionMapper roleMenuPermissionMapper;
     private final PermissionService permissionService;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final SecuritySessionService securitySessionService;
 
     public MenuServiceImpl(
@@ -53,14 +53,14 @@ public class MenuServiceImpl implements MenuService {
             RoleMapper roleMapper,
             RoleMenuPermissionMapper roleMenuPermissionMapper,
             PermissionService permissionService,
-            BusinessIdGenerator businessIdGenerator,
+            SystemEntityIdGenerator entityIdGenerator,
             SecuritySessionService securitySessionService
     ) {
         this.menuMapper = menuMapper;
         this.roleMapper = roleMapper;
         this.roleMenuPermissionMapper = roleMenuPermissionMapper;
         this.permissionService = permissionService;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.securitySessionService = securitySessionService;
     }
 
@@ -182,7 +182,7 @@ public class MenuServiceImpl implements MenuService {
         ensureAuthMarkUnique(command.getAuthMark(), null);
 
         Menu menu = new Menu();
-        menu.setId(businessIdGenerator.nextMenuId());
+        menu.setId(entityIdGenerator.nextId(Menu.class));
         applyCommand(menu, command);
         menu.setDeleted(0);
         menu.setCreateBy(currentOperator());

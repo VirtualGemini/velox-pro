@@ -11,8 +11,8 @@ import com.velox.module.system.persistence.MenuMapper;
 import com.velox.module.system.persistence.ProfileMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.support.MenuQuerySupport;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.module.system.auth.service.PasswordCipherService;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.permission.service.PermissionService;
 import com.velox.module.system.user.dto.UserPasswordUpdateCommand;
 import com.velox.module.system.user.dto.UserInfoBasicDTO;
@@ -42,7 +42,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     private final PermissionService permissionService;
     private final MenuMapper menuMapper;
     private final PasswordCipherService passwordCipherService;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final ObjectMapper objectMapper;
     private final SecuritySessionService securitySessionService;
     private final UserLanguageStore userLanguageStore;
@@ -53,7 +53,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             PermissionService permissionService,
             MenuMapper menuMapper,
             PasswordCipherService passwordCipherService,
-            BusinessIdGenerator businessIdGenerator,
+            SystemEntityIdGenerator entityIdGenerator,
             ObjectMapper objectMapper,
             SecuritySessionService securitySessionService,
             UserLanguageStore userLanguageStore
@@ -63,7 +63,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         this.permissionService = permissionService;
         this.menuMapper = menuMapper;
         this.passwordCipherService = passwordCipherService;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.objectMapper = objectMapper;
         this.securitySessionService = securitySessionService;
         this.userLanguageStore = userLanguageStore;
@@ -260,7 +260,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         }
 
         Profile created = new Profile();
-        created.setId(businessIdGenerator.nextProfileId());
+        created.setId(entityIdGenerator.nextId(Profile.class));
         created.setUserId(user.getId());
         created.setNickname(user.getUsername());
         created.setAvatar(buildDefaultAvatar(user.getUsername()));

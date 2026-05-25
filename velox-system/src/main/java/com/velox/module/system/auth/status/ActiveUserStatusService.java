@@ -8,11 +8,23 @@ public interface ActiveUserStatusService {
     String STATUS_ONLINE = "1";
     String STATUS_OFFLINE = "2";
 
-    void recordRequestActivity(String userId);
+    default void recordRequestActivity(String userId) {
+        recordRequestActivity(userId, null);
+    }
 
-    void recordLogin(String userId);
+    void recordRequestActivity(String userId, String tokenValue);
 
-    void recordLogout(String userId);
+    default void recordLogin(String userId) {
+        recordLogin(userId, null, null);
+    }
+
+    void recordLogin(String userId, String sessionId, String tokenValue);
+
+    default void recordLogout(String userId) {
+        recordLogout(userId, null);
+    }
+
+    void recordLogout(String userId, String tokenValue);
 
     boolean isOnline(String userId);
 

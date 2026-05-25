@@ -12,10 +12,10 @@ import com.velox.framework.file.exception.FileClientException;
 import com.velox.module.system.file.domain.model.File;
 import com.velox.framework.file.api.client.FileClient;
 import com.velox.framework.file.api.util.FileTypeUtils;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.module.system.file.persistence.FileMapper;
 import com.velox.framework.web.RequestDateTimeFormatter;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.file.service.FileConfigService;
 import com.velox.module.system.file.service.FileService;
 import com.velox.module.system.file.vo.FileCreateReqVO;
@@ -49,17 +49,17 @@ public class FileServiceImpl implements FileService {
 
     private final FileMapper fileMapper;
 
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
 
     private final SecuritySessionService securitySessionService;
 
     public FileServiceImpl(FileConfigService fileConfigService,
                            FileMapper fileMapper,
-                           BusinessIdGenerator businessIdGenerator,
+                           SystemEntityIdGenerator entityIdGenerator,
                            SecuritySessionService securitySessionService) {
         this.fileConfigService = fileConfigService;
         this.fileMapper = fileMapper;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.securitySessionService = securitySessionService;
     }
 
@@ -121,7 +121,7 @@ public class FileServiceImpl implements FileService {
 
         try {
             File fileDO = new File();
-            fileDO.setId(businessIdGenerator.nextFileId());
+            fileDO.setId(entityIdGenerator.nextId(File.class));
             fileDO.setConfigId(client.getId());
             fileDO.setName(name);
             fileDO.setPath(path);
@@ -198,7 +198,7 @@ public class FileServiceImpl implements FileService {
     @Transactional(rollbackFor = Exception.class)
     public String createFile(FileCreateReqVO createReqVO) {
         File fileDO = new File();
-        fileDO.setId(businessIdGenerator.nextFileId());
+        fileDO.setId(entityIdGenerator.nextId(File.class));
         fileDO.setConfigId(createReqVO.getConfigId());
         fileDO.setName(FileUtil.getName(createReqVO.getPath()));
         fileDO.setPath(createReqVO.getPath());

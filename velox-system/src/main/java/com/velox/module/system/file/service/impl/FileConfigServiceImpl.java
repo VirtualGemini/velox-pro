@@ -13,9 +13,9 @@ import com.velox.framework.file.api.diagnostics.FileFailureReason;
 import com.velox.framework.file.api.diagnostics.FileFailureReasonResolver;
 import com.velox.framework.file.spi.client.FileClientConfig;
 import com.velox.framework.file.spi.client.FileClientManager;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.module.system.file.persistence.FileConfigMapper;
 import com.velox.framework.web.RequestDateTimeFormatter;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.file.service.FileConfigService;
 import com.velox.module.system.file.support.FileStorageConfigClassResolver;
 import com.velox.module.system.file.vo.FileConfigPageReqVO;
@@ -65,19 +65,19 @@ public class FileConfigServiceImpl implements FileConfigService {
 
     private final Validator validator;
 
-    private final BusinessIdGenerator idGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
 
     private final FileFailureReasonResolver fileFailureReasonResolver;
 
     public FileConfigServiceImpl(FileClientManager fileClientManager,
                                  FileConfigMapper fileConfigMapper,
                                  Validator validator,
-                                 BusinessIdGenerator idGenerator,
+                                 SystemEntityIdGenerator entityIdGenerator,
                                  FileFailureReasonResolver fileFailureReasonResolver) {
         this.fileClientManager = fileClientManager;
         this.fileConfigMapper = fileConfigMapper;
         this.validator = validator;
-        this.idGenerator = idGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.fileFailureReasonResolver = fileFailureReasonResolver;
     }
 
@@ -89,7 +89,7 @@ public class FileConfigServiceImpl implements FileConfigService {
     public String createFileConfig(FileConfigSaveReqVO createReqVO) {
         validateClientConfig(createReqVO.getStorage(), createReqVO.getConfig());
         FileConfig fileConfig = new FileConfig();
-        fileConfig.setId(idGenerator.nextFileConfigId());
+        fileConfig.setId(entityIdGenerator.nextId(FileConfig.class));
         fileConfig.setName(createReqVO.getName());
         fileConfig.setStorage(createReqVO.getStorage());
         fileConfig.setConfig(createReqVO.getConfig());

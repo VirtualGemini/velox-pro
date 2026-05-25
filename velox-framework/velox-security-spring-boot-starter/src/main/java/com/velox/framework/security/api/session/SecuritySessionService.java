@@ -7,6 +7,10 @@ public interface SecuritySessionService {
 
     String login(String loginId);
 
+    default String login(String loginId, String sessionKey) {
+        return login(loginId);
+    }
+
     void logout();
 
     boolean isAuthenticated();

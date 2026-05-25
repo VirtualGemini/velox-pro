@@ -19,12 +19,11 @@ Hot-pluggable business ID starter for Velox. The default runtime posture is:
 
 ## Default Behavior
 
-`BusinessIdGenerator` returns persisted/source IDs for methods such as:
+`BusinessIdGenerator` returns persisted/source IDs for generic methods such as:
 
-- `nextUserId()`
-- `nextRoleId()`
-- `nextMenuId()`
-- `nextFileId()`
+- `next()`
+- `next("your-domain")`
+- `nextGeneratedId("your-domain")`
 
 For `strategy=snowflake`, these values are decimal Snowflake strings. For `strategy=uuid`, they are UUID strings.
 

@@ -1,6 +1,7 @@
 -- Business IDs are stored as BIGINT; velox.id.snowflake.enabled=true uses Snowflake and false uses database sequences.
 DROP TABLE IF EXISTS sys_id_sequence CASCADE;
 DROP TABLE IF EXISTS sys_role_menu_permission CASCADE;
+DROP TABLE IF EXISTS sys_user_session CASCADE;
 DROP TABLE IF EXISTS sys_user_role CASCADE;
 DROP TABLE IF EXISTS sys_profile CASCADE;
 DROP TABLE IF EXISTS sys_menu CASCADE;
@@ -24,6 +25,7 @@ INSERT INTO sys_id_sequence (business_type, current_value) VALUES
   ('sys_menu',0),
   ('sys_profile',0),
   ('sys_user_role',0),
+  ('sys_user_session',0),
   ('sys_role_menu_permission',0),
   ('sys_file_config',0),
   ('sys_file',0),
@@ -347,3 +349,23 @@ INSERT INTO sys_user_role (id, user_id, role_id, create_time, update_time, creat
   ('1900000000000000021','1900000000000000027','1900000000000000023','2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   ('1900000000000000012','1900000000000000087','1900000000000000073','2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0),
   ('1900000000000000024','1900000000000000048','1900000000000000032','2026-05-10 12:00:00','2026-05-10 12:00:00',1900000000000000027,1900000000000000027,0);
+
+CREATE TABLE sys_user_session (
+  id bigint PRIMARY KEY,
+  user_id bigint NOT NULL REFERENCES sys_user (id),
+  token_hash varchar(64) NOT NULL,
+  status smallint NOT NULL DEFAULT 1,
+  login_time timestamp,
+  last_active_time timestamp,
+  logout_time timestamp,
+  presence_expire_time timestamp,
+  create_time timestamp DEFAULT CURRENT_TIMESTAMP,
+  update_time timestamp DEFAULT CURRENT_TIMESTAMP,
+  create_by bigint,
+  update_by bigint,
+  deleted smallint NOT NULL DEFAULT 0
+);
+
+CREATE UNIQUE INDEX uk_user_session_token_hash ON sys_user_session (token_hash);
+CREATE INDEX idx_user_session_user_id ON sys_user_session (user_id);
+CREATE INDEX idx_user_session_presence_expire_time ON sys_user_session (presence_expire_time);

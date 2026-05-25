@@ -67,6 +67,7 @@ INSERT INTO `sys_id_sequence` (`business_type`, `current_value`) VALUES
   ('sys_menu',0),
   ('sys_profile',0),
   ('sys_user_role',0),
+  ('sys_user_session',0),
   ('sys_role_menu_permission',0),
   ('sys_file_config',0),
   ('sys_file',0),
@@ -503,6 +504,35 @@ CREATE TABLE `sys_user_role` (
   CONSTRAINT `fk_sys_user_role_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`),
   CONSTRAINT `fk_sys_user_role_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户角色关联表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `sys_user_session`
+--
+
+DROP TABLE IF EXISTS `sys_user_session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_user_session` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `token_hash` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Token摘要',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '会话状态(1-在线 2-已退出)',
+  `login_time` datetime DEFAULT NULL COMMENT '登录时间',
+  `last_active_time` datetime DEFAULT NULL COMMENT '最后活动时间',
+  `logout_time` datetime DEFAULT NULL COMMENT '退出时间',
+  `presence_expire_time` datetime DEFAULT NULL COMMENT '在线状态过期时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_by` bigint DEFAULT NULL COMMENT '创建人',
+  `update_by` bigint DEFAULT NULL COMMENT '更新人',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除(0-未删除 1-已删除)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_session_token_hash` (`token_hash`),
+  KEY `idx_user_session_user_id` (`user_id`),
+  KEY `idx_user_session_presence_expire_time` (`presence_expire_time`),
+  CONSTRAINT `fk_sys_user_session_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户登录会话表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

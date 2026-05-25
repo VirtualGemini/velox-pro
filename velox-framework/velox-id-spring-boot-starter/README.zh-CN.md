@@ -19,12 +19,11 @@ Velox 的热插拔业务主键 starter，默认运行姿态为：
 
 ## 默认行为
 
-`BusinessIdGenerator` 的以下方法返回最终落库的源值 ID：
+`BusinessIdGenerator` 通过以下通用方法返回最终落库的源值 ID：
 
-- `nextUserId()`
-- `nextRoleId()`
-- `nextMenuId()`
-- `nextFileId()`
+- `next()`
+- `next("your-domain")`
+- `nextGeneratedId("your-domain")`
 
 当 `strategy=snowflake` 时，这些值是十进制 Snowflake 字符串；当 `strategy=uuid` 时，这些值是 UUID 字符串。
 

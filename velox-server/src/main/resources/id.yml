@@ -24,6 +24,9 @@ velox:
           - table: sys_user_role
             id-column: id
             business-type: sys_user_role
+          - table: sys_user_session
+            id-column: id
+            business-type: sys_user_session
           - table: sys_role_menu_permission
             id-column: id
             business-type: sys_role_menu_permission
@@ -83,6 +86,17 @@ velox:
                 kind: fk
               - column: role_id
                 target-business-type: sys_role
+                kind: fk
+              - column: create_by
+                target-business-type: sys_user
+                kind: audit
+              - column: update_by
+                target-business-type: sys_user
+                kind: audit
+          - table: sys_user_session
+            mappings:
+              - column: user_id
+                target-business-type: sys_user
                 kind: fk
               - column: create_by
                 target-business-type: sys_user

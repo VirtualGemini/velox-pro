@@ -11,7 +11,6 @@ import com.velox.module.system.domain.model.Profile;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.User;
 import com.velox.module.system.domain.model.UserRole;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.framework.security.api.session.SecuritySessionService;
 import com.velox.framework.security.properties.SecurityProperties;
 import com.velox.module.system.persistence.ProfileMapper;
@@ -30,9 +29,12 @@ import com.velox.module.system.auth.service.LoginService;
 import com.velox.module.system.auth.service.PasswordCipherService;
 import com.velox.module.system.auth.status.ActiveUserStatusService;
 import com.velox.module.system.auth.store.VerificationCodeStore;
+import com.velox.module.system.domain.model.UserSession;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.wf.captcha.SpecCaptcha;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LoginServiceImpl implements LoginService {
@@ -47,7 +49,7 @@ public class LoginServiceImpl implements LoginService {
     private final UserRoleMapper userRoleMapper;
     private final PasswordCipherService passwordCipherService;
     private final SecurityProperties securityProperties;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final ObjectProvider<EmailBuilder> emailBuilderProvider;
     private final VerificationCodeStore verificationCodeStore;
     private final ActiveUserStatusService activeUserStatusService;
@@ -59,7 +61,7 @@ public class LoginServiceImpl implements LoginService {
                             UserRoleMapper userRoleMapper,
                             PasswordCipherService passwordCipherService,
                             SecurityProperties securityProperties,
-                            BusinessIdGenerator businessIdGenerator,
+                            SystemEntityIdGenerator entityIdGenerator,
                             ObjectProvider<EmailBuilder> emailBuilderProvider,
                             VerificationCodeStore verificationCodeStore,
                             ActiveUserStatusService activeUserStatusService,
@@ -70,7 +72,7 @@ public class LoginServiceImpl implements LoginService {
         this.userRoleMapper = userRoleMapper;
         this.passwordCipherService = passwordCipherService;
         this.securityProperties = securityProperties;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.emailBuilderProvider = emailBuilderProvider;
         this.verificationCodeStore = verificationCodeStore;
         this.activeUserStatusService = activeUserStatusService;
@@ -93,6 +95,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public TokenDTO login(LoginCommand command) {
         validateCaptchaIfPresent(command.getCaptchaCode(), command.getCaptchaCodeKey());
 
@@ -127,8 +130,18 @@ public class LoginServiceImpl implements LoginService {
         resetLoginFailCount(user);
         upgradePasswordIfNeeded(user, password);
 
-        String token = securitySessionService.login(user.getId());
-        activeUserStatusService.recordLogin(user.getId());
+        String sessionId = entityIdGenerator.nextId(UserSession.class);
+        String token = securitySessionService.login(user.getId(), sessionId);
+        try {
+            activeUserStatusService.recordLogin(user.getId(), sessionId, token);
+        } catch (RuntimeException exception) {
+            try {
+                securitySessionService.logout();
+            } catch (RuntimeException ignored) {
+                // 会话表写入失败时优先回滚当前 token，避免发出不可追踪的登录态。
+            }
+            throw exception;
+        }
 
         return new TokenDTO(token, null);
     }
@@ -150,7 +163,7 @@ public class LoginServiceImpl implements LoginService {
         }
 
         User user = new User();
-        user.setId(businessIdGenerator.nextUserId());
+        user.setId(entityIdGenerator.nextId(User.class));
         user.setUsername(command.getUsername());
         user.setPassword(passwordCipherService.encode(command.getPassword()));
         user.setStatus(1);
@@ -160,7 +173,7 @@ public class LoginServiceImpl implements LoginService {
         userMapper.insert(user);
 
         Profile profile = new Profile();
-        profile.setId(businessIdGenerator.nextProfileId());
+        profile.setId(entityIdGenerator.nextId(Profile.class));
         profile.setUserId(user.getId());
         profile.setNickname(command.getUsername());
         profile.setAvatar(buildDefaultAvatar(command.getUsername()));
@@ -174,7 +187,7 @@ public class LoginServiceImpl implements LoginService {
                 .last("limit 1"));
         if (defaultRole != null && defaultRole.getId() != null) {
             UserRole userRole = new UserRole();
-            userRole.setId(businessIdGenerator.nextUserRoleId());
+            userRole.setId(entityIdGenerator.nextId(UserRole.class));
             userRole.setUserId(user.getId());
             userRole.setRoleId(defaultRole.getId());
             userRole.setDeleted(0);
@@ -254,10 +267,12 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void logout() {
         String userId = securitySessionService.currentLoginIdOrNull();
+        String tokenValue = securitySessionService.currentTokenOrNull();
         securitySessionService.logout();
-        activeUserStatusService.recordLogout(userId);
+        activeUserStatusService.recordLogout(userId, tokenValue);
     }
 
     @Override
@@ -307,6 +322,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public TokenDTO loginByCode(CodeLoginCommand command) {
         String type = command.getType() == null ? "" : command.getType().trim().toLowerCase();
         if ("phone".equals(type)) {
@@ -344,8 +360,18 @@ public class LoginServiceImpl implements LoginService {
 
         resetLoginFailCount(user);
 
-        String token = securitySessionService.login(user.getId());
-        activeUserStatusService.recordLogin(user.getId());
+        String sessionId = entityIdGenerator.nextId(UserSession.class);
+        String token = securitySessionService.login(user.getId(), sessionId);
+        try {
+            activeUserStatusService.recordLogin(user.getId(), sessionId, token);
+        } catch (RuntimeException exception) {
+            try {
+                securitySessionService.logout();
+            } catch (RuntimeException ignored) {
+                // 会话表写入失败时优先回滚当前 token，避免发出不可追踪的登录态。
+            }
+            throw exception;
+        }
 
         return new TokenDTO(token, null);
     }

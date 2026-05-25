@@ -22,6 +22,9 @@ import com.velox.module.system.id.database.diagnostic.DatabaseIdDiagnosticSeveri
 import com.velox.module.system.id.database.diagnostic.DatabaseIdPlanDiagnostic;
 import com.velox.module.system.id.database.diagnostic.DatabaseIdPlanReport;
 import com.velox.module.system.id.database.plan.model.DatabaseIdReconciliationPlan;
+import org.springframework.util.StringUtils;
+
+import static com.velox.module.system.id.database.internal.DatabaseIdInternals.normalizeName;
 
 public class DatabaseIdSchemaBootstrapper {
 
@@ -263,10 +266,27 @@ public class DatabaseIdSchemaBootstrapper {
     private Map<String, Long> defaultSequenceSeeds(Connection connection) throws SQLException {
         Map<String, Long> values = new LinkedHashMap<>();
         values.put(IdBusinessTypes.DEFAULT, 0L);
+        for (SystemDatabaseIdGovernanceProperties.DomainDeclaration declaration : governanceProperties.getDomains()) {
+            if (!declaration.isEnabled()) {
+                continue;
+            }
+            String businessType = resolveBusinessType(declaration);
+            if (businessType.isBlank()) {
+                continue;
+            }
+            values.putIfAbsent(businessType, 0L);
+        }
         for (String businessType : reconciler.resolveManagedBusinessTypes(connection)) {
             values.putIfAbsent(businessType, 0L);
         }
         return values;
+    }
+
+    private String resolveBusinessType(SystemDatabaseIdGovernanceProperties.DomainDeclaration declaration) {
+        if (StringUtils.hasText(declaration.getBusinessType())) {
+            return normalizeName(declaration.getBusinessType());
+        }
+        return normalizeName(declaration.getTable());
     }
 
     @FunctionalInterface

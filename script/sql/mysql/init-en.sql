@@ -67,6 +67,7 @@ INSERT INTO `sys_id_sequence` (`business_type`, `current_value`) VALUES
   ('sys_menu',0),
   ('sys_profile',0),
   ('sys_user_role',0),
+  ('sys_user_session',0),
   ('sys_role_menu_permission',0),
   ('sys_file_config',0),
   ('sys_file',0),
@@ -503,6 +504,35 @@ CREATE TABLE `sys_user_role` (
   CONSTRAINT `fk_sys_user_role_role_id` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`),
   CONSTRAINT `fk_sys_user_role_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='User Role Relation Table';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `sys_user_session`
+--
+
+DROP TABLE IF EXISTS `sys_user_session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_user_session` (
+  `id` bigint NOT NULL COMMENT 'Primary Key ID',
+  `user_id` bigint NOT NULL COMMENT 'User ID',
+  `token_hash` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Token Digest',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT 'Session Status (1-online 2-logged-out)',
+  `login_time` datetime DEFAULT NULL COMMENT 'Login Time',
+  `last_active_time` datetime DEFAULT NULL COMMENT 'Last Active Time',
+  `logout_time` datetime DEFAULT NULL COMMENT 'Logout Time',
+  `presence_expire_time` datetime DEFAULT NULL COMMENT 'Presence Expire Time',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'Created Time',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Updated Time',
+  `create_by` bigint DEFAULT NULL COMMENT 'Created By',
+  `update_by` bigint DEFAULT NULL COMMENT 'Updated By',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT 'Logical Delete (0-active 1-deleted)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_session_token_hash` (`token_hash`),
+  KEY `idx_user_session_user_id` (`user_id`),
+  KEY `idx_user_session_presence_expire_time` (`presence_expire_time`),
+  CONSTRAINT `fk_sys_user_session_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='User Login Session Table';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

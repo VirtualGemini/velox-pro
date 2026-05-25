@@ -8,7 +8,7 @@ import com.velox.module.system.domain.model.Menu;
 import com.velox.module.system.domain.model.Role;
 import com.velox.module.system.domain.model.RoleMenuPermission;
 import com.velox.module.system.domain.model.UserRole;
-import com.velox.framework.id.BusinessIdGenerator;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.persistence.MenuMapper;
 import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.RoleMenuPermissionMapper;
@@ -36,20 +36,20 @@ public class PermissionServiceImpl implements PermissionService {
     private final MenuMapper menuMapper;
     private final RoleMenuPermissionMapper roleMenuPermissionMapper;
     private final UserRoleMapper userRoleMapper;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final SecuritySessionService securitySessionService;
 
     public PermissionServiceImpl(RoleMapper roleMapper,
                                  MenuMapper menuMapper,
                                  RoleMenuPermissionMapper roleMenuPermissionMapper,
                                  UserRoleMapper userRoleMapper,
-                                 BusinessIdGenerator businessIdGenerator,
+                                 SystemEntityIdGenerator entityIdGenerator,
                                  SecuritySessionService securitySessionService) {
         this.roleMapper = roleMapper;
         this.menuMapper = menuMapper;
         this.roleMenuPermissionMapper = roleMenuPermissionMapper;
         this.userRoleMapper = userRoleMapper;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.securitySessionService = securitySessionService;
     }
 
@@ -147,7 +147,7 @@ public class PermissionServiceImpl implements PermissionService {
             List<RoleMenuPermission> entities = new ArrayList<>(createIds.size());
             for (String menuId : createIds) {
                 RoleMenuPermission permission = new RoleMenuPermission();
-                permission.setId(businessIdGenerator.nextRoleMenuPermissionId());
+                permission.setId(entityIdGenerator.nextId(RoleMenuPermission.class));
                 permission.setRoleId(normalizedRoleId);
                 permission.setMenuId(menuId);
                 permission.setDeleted(0);

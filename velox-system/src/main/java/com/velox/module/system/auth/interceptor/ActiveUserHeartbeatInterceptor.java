@@ -25,8 +25,9 @@ public class ActiveUserHeartbeatInterceptor implements HandlerInterceptor {
                              @NonNull HttpServletResponse response,
                              @NonNull Object handler) {
         String loginId = securitySessionService.currentLoginIdOrNull();
+        String tokenValue = securitySessionService.currentTokenOrNull();
         if (loginId != null && !loginId.isBlank()) {
-            activeUserStatusService.recordRequestActivity(loginId);
+            activeUserStatusService.recordRequestActivity(loginId, tokenValue);
         }
         return true;
     }

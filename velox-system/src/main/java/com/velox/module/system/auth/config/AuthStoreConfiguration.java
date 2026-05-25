@@ -1,10 +1,8 @@
 package com.velox.module.system.auth.config;
 
 import com.velox.framework.redis.common.prefix.RedisPropertyPrefixes;
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.session.UserSessionService;
 import com.velox.module.system.auth.status.ActiveUserStatusService;
-import com.velox.module.system.auth.status.InMemoryActiveUserStatusService;
-import com.velox.module.system.auth.status.RedisActiveUserStatusService;
 import com.velox.module.system.auth.store.InMemoryVerificationCodeStore;
 import com.velox.module.system.auth.store.RedisVerificationCodeStore;
 import com.velox.module.system.auth.store.VerificationCodeStore;
@@ -18,32 +16,49 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class AuthStoreConfiguration {
 
     @Bean
+    @ConditionalOnMissingBean(ActiveUserStatusService.class)
+    public ActiveUserStatusService activeUserStatusService(UserSessionService userSessionService) {
+        return new ActiveUserStatusService() {
+            @Override
+            public void recordRequestActivity(String userId, String tokenValue) {
+                userSessionService.recordRequestActivity(userId, tokenValue);
+            }
+
+            @Override
+            public void recordLogin(String userId, String sessionId, String tokenValue) {
+                userSessionService.recordLogin(userId, sessionId, tokenValue);
+            }
+
+            @Override
+            public void recordLogout(String userId, String tokenValue) {
+                userSessionService.recordLogout(userId, tokenValue);
+            }
+
+            @Override
+            public boolean isOnline(String userId) {
+                return userSessionService.isOnline(userId);
+            }
+
+            @Override
+            public java.util.Map<String, String> resolveStatuses(java.util.Collection<String> userIds) {
+                return userSessionService.resolveStatuses(userIds);
+            }
+        };
+    }
+
+    @Bean
     @ConditionalOnMissingBean(VerificationCodeStore.class)
     @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "true", matchIfMissing = true)
     public VerificationCodeStore redisVerificationCodeStore(StringRedisTemplate stringRedisTemplate,
-                                                            SecurityProperties securityProperties) {
+                                                            com.velox.framework.security.properties.SecurityProperties securityProperties) {
         return new RedisVerificationCodeStore(stringRedisTemplate, securityProperties);
     }
 
     @Bean
     @ConditionalOnMissingBean(VerificationCodeStore.class)
     @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "false")
-    public VerificationCodeStore inMemoryVerificationCodeStore(SecurityProperties securityProperties) {
+    public VerificationCodeStore inMemoryVerificationCodeStore(
+            com.velox.framework.security.properties.SecurityProperties securityProperties) {
         return new InMemoryVerificationCodeStore(securityProperties);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(ActiveUserStatusService.class)
-    @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "true", matchIfMissing = true)
-    public ActiveUserStatusService redisActiveUserStatusService(StringRedisTemplate stringRedisTemplate,
-                                                                SecurityProperties securityProperties) {
-        return new RedisActiveUserStatusService(stringRedisTemplate, securityProperties);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(ActiveUserStatusService.class)
-    @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "false")
-    public ActiveUserStatusService inMemoryActiveUserStatusService(SecurityProperties securityProperties) {
-        return new InMemoryActiveUserStatusService(securityProperties);
     }
 }

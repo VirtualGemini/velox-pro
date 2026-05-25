@@ -22,7 +22,7 @@ public class InMemoryActiveUserStatusService implements ActiveUserStatusService 
     }
 
     @Override
-    public void recordRequestActivity(String userId) {
+    public void recordRequestActivity(String userId, String tokenValue) {
         if (!presenceProperties.isRequestHeartbeatEnabled()) {
             return;
         }
@@ -30,7 +30,7 @@ public class InMemoryActiveUserStatusService implements ActiveUserStatusService 
     }
 
     @Override
-    public void recordLogin(String userId) {
+    public void recordLogin(String userId, String sessionId, String tokenValue) {
         if (!presenceProperties.isLoginSignalEnabled()) {
             return;
         }
@@ -38,7 +38,7 @@ public class InMemoryActiveUserStatusService implements ActiveUserStatusService 
     }
 
     @Override
-    public void recordLogout(String userId) {
+    public void recordLogout(String userId, String tokenValue) {
         if (!presenceProperties.isLogoutSignalEnabled() || !StringUtils.hasText(userId)) {
             return;
         }

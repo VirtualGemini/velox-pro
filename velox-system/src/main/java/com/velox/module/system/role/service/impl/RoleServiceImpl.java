@@ -15,8 +15,8 @@ import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.RoleMenuPermissionMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
 import com.velox.module.system.persistence.support.MenuQuerySupport;
-import com.velox.framework.id.BusinessIdGenerator;
 import com.velox.framework.web.RequestDateTimeFormatter;
+import com.velox.module.system.id.generator.SystemEntityIdGenerator;
 import com.velox.module.system.permission.service.PermissionService;
 import com.velox.module.system.role.dto.RoleListItemDTO;
 import com.velox.module.system.role.dto.RoleMenuPermissionUpdateCommand;
@@ -50,7 +50,7 @@ public class RoleServiceImpl implements RoleService {
     private final UserRoleMapper userRoleMapper;
     private final RoleMenuPermissionMapper roleMenuPermissionMapper;
     private final PermissionService permissionService;
-    private final BusinessIdGenerator businessIdGenerator;
+    private final SystemEntityIdGenerator entityIdGenerator;
     private final SecuritySessionService securitySessionService;
 
     public RoleServiceImpl(
@@ -59,7 +59,7 @@ public class RoleServiceImpl implements RoleService {
             UserRoleMapper userRoleMapper,
             RoleMenuPermissionMapper roleMenuPermissionMapper,
             PermissionService permissionService,
-            BusinessIdGenerator businessIdGenerator,
+            SystemEntityIdGenerator entityIdGenerator,
             SecuritySessionService securitySessionService
     ) {
         this.menuMapper = menuMapper;
@@ -67,7 +67,7 @@ public class RoleServiceImpl implements RoleService {
         this.userRoleMapper = userRoleMapper;
         this.roleMenuPermissionMapper = roleMenuPermissionMapper;
         this.permissionService = permissionService;
-        this.businessIdGenerator = businessIdGenerator;
+        this.entityIdGenerator = entityIdGenerator;
         this.securitySessionService = securitySessionService;
     }
 
@@ -126,7 +126,7 @@ public class RoleServiceImpl implements RoleService {
     public String create(RoleSaveCommand command) {
         ensureRoleCodeUnique(command.getRoleCode(), null);
         Role role = new Role();
-        role.setId(businessIdGenerator.nextRoleId());
+        role.setId(entityIdGenerator.nextId(Role.class));
         role.setRoleName(command.getRoleName().trim());
         role.setRoleCode(command.getRoleCode().trim());
         role.setDescription(command.getDescription().trim());
