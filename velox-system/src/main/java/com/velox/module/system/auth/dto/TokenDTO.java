@@ -4,16 +4,16 @@ public class TokenDTO {
     private String token;
     private Object userInfo;
     /**
-     * 第一段登录通过且用户开启了二段验证时返回的临时挑战令牌。
-     * 该字段与 token 互斥：mfaChallenge 非空表示需要进入二段验证。
+     * 第一段登录通过且用户开启了虚拟 MFA 设备验证时返回的临时挑战令牌。
+     * 该字段与 token 互斥：mfaChallenge 非空表示需要进入虚拟 MFA 设备验证。
      */
     private String mfaChallenge;
     /**
-     * 当前挑战需要走的二段方式："email" 或 "totp"。仅在返回 mfaChallenge 时设置。
+     * 当前挑战需要走的验证方式："email" 或 "totp"。仅在返回 mfaChallenge 时设置。
      */
     private String mfaType;
     /**
-     * 二段验证目标邮箱（已脱敏），用于前端提示"将向 xxx 发送验证码"。
+     * 虚拟 MFA 设备验证目标邮箱（已脱敏），用于前端提示"将向 xxx 发送验证码"。
      * 仅在 mfaType=email 时设置。
      */
     private String mfaEmailMasked;

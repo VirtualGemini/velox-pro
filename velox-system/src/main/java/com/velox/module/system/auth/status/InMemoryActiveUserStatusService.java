@@ -1,6 +1,6 @@
 package com.velox.module.system.auth.status;
 
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import org.springframework.util.StringUtils;
 
 import java.util.Collection;
@@ -13,12 +13,12 @@ public class InMemoryActiveUserStatusService implements ActiveUserStatusService 
 
     private static final int CLEANUP_INTERVAL = 128;
 
-    private final SecurityProperties.Login.Presence presenceProperties;
+    private final SystemAuthProperties.Login.Presence presenceProperties;
     private final Map<String, Long> presenceStore = new ConcurrentHashMap<>();
     private final AtomicInteger operationCounter = new AtomicInteger();
 
-    public InMemoryActiveUserStatusService(SecurityProperties securityProperties) {
-        this.presenceProperties = securityProperties.getLogin().getPresence();
+    public InMemoryActiveUserStatusService(SystemAuthProperties authProperties) {
+        this.presenceProperties = authProperties.getLogin().getPresence();
     }
 
     @Override

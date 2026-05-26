@@ -8,7 +8,7 @@ import com.velox.email.api.builder.EmailBuilder;
 import com.velox.email.api.message.SendResponse;
 import com.velox.email.common.error.EmailErrorCode;
 import com.velox.framework.security.api.session.SecuritySessionService;
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAccountSecurityProperties;
 import com.velox.module.system.auth.service.PasswordCipherService;
 import com.velox.module.system.auth.store.VerificationCodeStore;
 import com.velox.module.system.domain.model.User;
@@ -27,9 +27,9 @@ import com.velox.module.system.user.security.dto.MfaTotpEnableCommand;
 import com.velox.module.system.user.security.dto.MfaTotpProvisionDTO;
 import com.velox.module.system.user.security.dto.SecurityStatusDTO;
 import com.velox.module.system.user.security.service.AccountSecurityService;
-import com.velox.totp.api.model.TotpProvisioning;
-import com.velox.totp.api.model.TotpVerifyResult;
-import com.velox.totp.api.service.TotpService;
+import com.velox.framework.totp.api.model.TotpProvisioning;
+import com.velox.framework.totp.api.model.TotpVerifyResult;
+import com.velox.framework.totp.api.service.TotpService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +63,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
     private final UserMapper userMapper;
     private final UserSecurityMapper userSecurityMapper;
     private final SecuritySessionService securitySessionService;
-    private final SecurityProperties securityProperties;
+    private final SystemAccountSecurityProperties accountSecurityProperties;
     private final SystemEntityIdGenerator entityIdGenerator;
     private final VerificationCodeStore verificationCodeStore;
     private final ObjectProvider<EmailBuilder> emailBuilderProvider;
@@ -74,7 +74,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
             UserMapper userMapper,
             UserSecurityMapper userSecurityMapper,
             SecuritySessionService securitySessionService,
-            SecurityProperties securityProperties,
+            SystemAccountSecurityProperties accountSecurityProperties,
             SystemEntityIdGenerator entityIdGenerator,
             VerificationCodeStore verificationCodeStore,
             ObjectProvider<EmailBuilder> emailBuilderProvider,
@@ -83,7 +83,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         this.userMapper = userMapper;
         this.userSecurityMapper = userSecurityMapper;
         this.securitySessionService = securitySessionService;
-        this.securityProperties = securityProperties;
+        this.accountSecurityProperties = accountSecurityProperties;
         this.entityIdGenerator = entityIdGenerator;
         this.verificationCodeStore = verificationCodeStore;
         this.emailBuilderProvider = emailBuilderProvider;
@@ -97,12 +97,11 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         User user = requireUser(userId);
         UserSecurity security = getOrInitSecurity(user);
 
-        SecurityProperties.Account account = securityProperties.getAccount();
-        List<String> allowed = new ArrayList<>(account.getLoginMethods().getEnabled());
+        List<String> allowed = new ArrayList<>(accountSecurityProperties.getLoginMethods().getEnabled());
 
         List<String> stored = parseLoginMethods(security.getLoginMethods());
         if (stored.isEmpty()) {
-            stored = new ArrayList<>(account.getLoginMethods().getDefaults());
+            stored = new ArrayList<>(accountSecurityProperties.getLoginMethods().getDefaults());
         }
         List<String> effective = stored.stream()
                 .filter(allowed::contains)
@@ -114,7 +113,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         dto.setLoginMethods(stored);
         dto.setEffectiveLoginMethods(effective);
         dto.setAllowedLoginMethods(allowed);
-        dto.setPasswordRequired(account.getLoginMethods().isPasswordRequired());
+        dto.setPasswordRequired(accountSecurityProperties.getLoginMethods().isPasswordRequired());
 
         SecurityStatusDTO.MfaStatus mfa = new SecurityStatusDTO.MfaStatus();
         mfa.setEmail(Integer.valueOf(1).equals(security.getMfaEmailEnabled()));
@@ -136,7 +135,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         }
 
         EmailBuilder emailBuilder = requireEmailBuilder();
-        SecurityProperties.Account.Rebind.Email rebindConfig = securityProperties.getAccount().getRebind().getEmail();
+        SystemAccountSecurityProperties.Rebind.Email rebindConfig = accountSecurityProperties.getRebind().getEmail();
         String code = RandomUtil.randomNumbers(6);
         if (!verificationCodeStore.trySaveRebindCode(
                 REBIND_PROOF_SCOPE,
@@ -184,7 +183,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
             default -> throw new ApiException(BusinessErrorCode.REBIND_PROOF_TYPE_MISMATCH);
         }
 
-        int proofTtlSeconds = securityProperties.getAccount().getMfa().getEmail().getChallengeTtlSeconds();
+        int proofTtlSeconds = accountSecurityProperties.getMfa().getEmail().getChallengeTtlSeconds();
         String proofTicket = UUID.randomUUID().toString().replace("-", "");
         verificationCodeStore.saveProofTicket(REBIND_SCENE, proofTicket, userId, proofTtlSeconds);
 
@@ -215,7 +214,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         }
 
         EmailBuilder emailBuilder = requireEmailBuilder();
-        SecurityProperties.Account.Rebind.Email rebindConfig = securityProperties.getAccount().getRebind().getEmail();
+        SystemAccountSecurityProperties.Rebind.Email rebindConfig = accountSecurityProperties.getRebind().getEmail();
         String code = RandomUtil.randomNumbers(6);
         if (!verificationCodeStore.trySaveRebindCode("email", newEmail, code,
                 rebindConfig.getCodeTtlSeconds(), rebindConfig.getResendIntervalSeconds())) {
@@ -302,7 +301,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
             throw new ApiException(BusinessErrorCode.LOGIN_METHOD_EMPTY);
         }
 
-        SecurityProperties.Account.LoginMethods config = securityProperties.getAccount().getLoginMethods();
+        SystemAccountSecurityProperties.LoginMethods config = accountSecurityProperties.getLoginMethods();
         List<String> enabled = config.getEnabled();
         for (String method : dedup) {
             if (!enabled.contains(method)) {
@@ -330,7 +329,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         }
 
         EmailBuilder emailBuilder = requireEmailBuilder();
-        SecurityProperties.Account.Mfa.Email mfaConfig = securityProperties.getAccount().getMfa().getEmail();
+        SystemAccountSecurityProperties.Mfa.Email mfaConfig = accountSecurityProperties.getMfa().getEmail();
         String code = RandomUtil.randomNumbers(6);
         if (!verificationCodeStore.trySaveMfaCode(userId, code,
                 mfaConfig.getTtlSeconds(), mfaConfig.getResendIntervalSeconds())) {
@@ -338,7 +337,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         }
         try {
             SendResponse response = emailBuilder.to(email)
-                    .subject("二段验证码")
+                    .subject("二次验证码")
                     .text(buildMfaCodeContent(user.getUsername(), code))
                     .sendSync();
             if (!response.success()) {
@@ -493,7 +492,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
         if (security != null) {
             return security;
         }
-        SecurityProperties.Account.LoginMethods config = securityProperties.getAccount().getLoginMethods();
+        SystemAccountSecurityProperties.LoginMethods config = accountSecurityProperties.getLoginMethods();
         UserSecurity created = new UserSecurity();
         created.setId(entityIdGenerator.nextId(UserSecurity.class));
         created.setUserId(user.getId());
@@ -651,7 +650,7 @@ public class AccountSecurityServiceImpl implements AccountSecurityService {
 
     private String buildMfaCodeContent(String username, String code) {
         return "您好，" + username + "：\n\n"
-                + "您正在使用邮箱二段验证码。\n"
+                + "您正在使用邮箱二次验证码。\n"
                 + "本次验证码为：" + code + "\n"
                 + "验证码 5 分钟内有效，请勿泄露给他人。\n\n"
                 + "如果这不是您的操作，请尽快修改密码。";

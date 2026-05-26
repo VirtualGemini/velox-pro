@@ -2,7 +2,7 @@ package com.velox.module.system.auth.store;
 
 import cn.hutool.crypto.digest.HMac;
 import cn.hutool.crypto.digest.HmacAlgorithm;
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 
 import java.nio.charset.StandardCharsets;
 
@@ -20,14 +20,14 @@ abstract class AbstractVerificationCodeStore implements VerificationCodeStore {
     protected static final String MFA_CHALLENGE_PREFIX = "auth:mfa:challenge:";
     protected static final String PROOF_TICKET_PREFIX = "auth:proof:";
 
-    protected final SecurityProperties securityProperties;
+    protected final SystemAuthProperties authProperties;
 
-    protected AbstractVerificationCodeStore(SecurityProperties securityProperties) {
-        this.securityProperties = securityProperties;
+    protected AbstractVerificationCodeStore(SystemAuthProperties authProperties) {
+        this.authProperties = authProperties;
     }
 
     protected String digest(String code) {
-        String secret = securityProperties.getVerification().getSecret();
+        String secret = authProperties.getVerification().getSecret();
         HMac hMac = new HMac(HmacAlgorithm.HmacSHA256, secret.getBytes(StandardCharsets.UTF_8));
         return hMac.digestHex(code == null ? "" : code.trim().toLowerCase());
     }

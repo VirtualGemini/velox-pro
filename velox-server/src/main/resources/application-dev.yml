@@ -72,13 +72,15 @@ velox:
   security:
     # 开发环境默认不公开 Swagger
     swagger-public-enabled: false
-    verification:
+  system:
+    auth:
       # 验证码 HMAC 摘要密钥；开发环境可使用默认值，生产环境必须覆盖
-      secret: ${VERIFICATION_SECRET:velox-dev-verification-secret}
-      # 邮件重置验证码有效期（秒）
-      reset-code-ttl-seconds: 600
-      # 邮件重置验证码重复发送间隔（秒）
-      reset-code-resend-interval-seconds: 60
+      verification:
+        secret: ${VERIFICATION_SECRET:velox-dev-verification-secret}
+        # 邮件重置验证码有效期（秒）
+        reset-code-ttl-seconds: 600
+        # 邮件重置验证码重复发送间隔（秒）
+        reset-code-resend-interval-seconds: 60
   redis:
     # 开发环境默认开启 Redis；关闭后验证码和在线状态改为内存实现
     enabled: true

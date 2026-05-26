@@ -9,7 +9,6 @@ import com.velox.email.api.builder.EmailBuilder;
 import com.velox.email.api.message.SendResponse;
 import com.velox.email.common.error.EmailErrorCode;
 import com.velox.framework.security.api.session.SecuritySessionService;
-import com.velox.framework.security.properties.SecurityProperties;
 import com.velox.module.system.auth.dto.CaptchaDTO;
 import com.velox.module.system.auth.dto.CodeLoginCommand;
 import com.velox.module.system.auth.dto.ForgotPasswordCodeCommand;
@@ -20,6 +19,8 @@ import com.velox.module.system.auth.dto.MfaChallengeVerifyCommand;
 import com.velox.module.system.auth.dto.RegisterCommand;
 import com.velox.module.system.auth.dto.ResetPasswordCommand;
 import com.velox.module.system.auth.dto.TokenDTO;
+import com.velox.module.system.auth.properties.SystemAccountSecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import com.velox.module.system.auth.service.LoginService;
 import com.velox.module.system.auth.service.PasswordCipherService;
 import com.velox.module.system.auth.status.ActiveUserStatusService;
@@ -36,8 +37,8 @@ import com.velox.module.system.persistence.RoleMapper;
 import com.velox.module.system.persistence.UserMapper;
 import com.velox.module.system.persistence.UserRoleMapper;
 import com.velox.module.system.persistence.UserSecurityMapper;
-import com.velox.totp.api.model.TotpVerifyResult;
-import com.velox.totp.api.service.TotpService;
+import com.velox.framework.totp.api.model.TotpVerifyResult;
+import com.velox.framework.totp.api.service.TotpService;
 import com.wf.captcha.SpecCaptcha;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,8 @@ public class LoginServiceImpl implements LoginService {
     private final UserRoleMapper userRoleMapper;
     private final UserSecurityMapper userSecurityMapper;
     private final PasswordCipherService passwordCipherService;
-    private final SecurityProperties securityProperties;
+    private final SystemAuthProperties authProperties;
+    private final SystemAccountSecurityProperties accountSecurityProperties;
     private final SystemEntityIdGenerator entityIdGenerator;
     private final ObjectProvider<EmailBuilder> emailBuilderProvider;
     private final VerificationCodeStore verificationCodeStore;
@@ -77,7 +79,8 @@ public class LoginServiceImpl implements LoginService {
                             UserRoleMapper userRoleMapper,
                             UserSecurityMapper userSecurityMapper,
                             PasswordCipherService passwordCipherService,
-                            SecurityProperties securityProperties,
+                            SystemAuthProperties authProperties,
+                            SystemAccountSecurityProperties accountSecurityProperties,
                             SystemEntityIdGenerator entityIdGenerator,
                             ObjectProvider<EmailBuilder> emailBuilderProvider,
                             VerificationCodeStore verificationCodeStore,
@@ -90,7 +93,8 @@ public class LoginServiceImpl implements LoginService {
         this.userRoleMapper = userRoleMapper;
         this.userSecurityMapper = userSecurityMapper;
         this.passwordCipherService = passwordCipherService;
-        this.securityProperties = securityProperties;
+        this.authProperties = authProperties;
+        this.accountSecurityProperties = accountSecurityProperties;
         this.entityIdGenerator = entityIdGenerator;
         this.emailBuilderProvider = emailBuilderProvider;
         this.verificationCodeStore = verificationCodeStore;
@@ -214,7 +218,7 @@ public class LoginServiceImpl implements LoginService {
         security.setId(entityIdGenerator.nextId(UserSecurity.class));
         security.setUserId(user.getId());
         security.setLoginMethods(String.join(",",
-                securityProperties.getAccount().getLoginMethods().getDefaults()));
+                accountSecurityProperties.getLoginMethods().getDefaults()));
         security.setMfaEmailEnabled(0);
         security.setMfaTotpEnabled(0);
         security.setDeleted(0);
@@ -382,8 +386,8 @@ public class LoginServiceImpl implements LoginService {
 
         resetLoginFailCount(user);
 
-        // 邮箱验证码登录天然完成了邮箱因素校验，因此跳过邮箱二段；
-        // 但 TOTP 是独立因素，仍需要继续走二段挑战。
+        // 邮箱验证码登录天然完成了邮箱因素校验，因此跳过邮箱二次验证；
+        // 但 TOTP 是独立因素，仍需要继续走虚拟 MFA 设备验证挑战。
         String mfaType = resolveMfaType(security, "email_code");
         if (mfaType != null) {
             return issueMfaChallenge(user, mfaType);
@@ -406,7 +410,7 @@ public class LoginServiceImpl implements LoginService {
             throw new ApiException(BusinessErrorCode.USER_NOT_FOUND);
         }
         UserSecurity security = ensureUserSecurity(user);
-        // 仅当前挑战属于"邮箱二段"时才能下发；TOTP 由认证器生成，无需也不允许触发邮件。
+        // 仅当前挑战属于"邮箱二次验证"时才能下发；TOTP 由认证器生成，无需也不允许触发邮件。
         if (Integer.valueOf(1).equals(security.getMfaTotpEnabled())) {
             throw new ApiException(BusinessErrorCode.MFA_CHALLENGE_INVALID);
         }
@@ -419,7 +423,7 @@ public class LoginServiceImpl implements LoginService {
         }
 
         EmailBuilder emailBuilder = requireEmailBuilder();
-        SecurityProperties.Account.Mfa.Email mfaConfig = securityProperties.getAccount().getMfa().getEmail();
+        SystemAccountSecurityProperties.Mfa.Email mfaConfig = accountSecurityProperties.getMfa().getEmail();
         String code = RandomUtil.randomNumbers(6);
         if (!verificationCodeStore.trySaveMfaCode(userId, code,
                 mfaConfig.getTtlSeconds(), mfaConfig.getResendIntervalSeconds())) {
@@ -427,7 +431,7 @@ public class LoginServiceImpl implements LoginService {
         }
         try {
             SendResponse response = emailBuilder.to(email)
-                    .subject("登录二段验证码")
+                    .subject("登录二次验证码")
                     .text(buildMfaCodeContent(user.getUsername(), code))
                     .sendSync();
             if (!response.success()) {
@@ -479,7 +483,7 @@ public class LoginServiceImpl implements LoginService {
                 throw new ApiException(BusinessErrorCode.MFA_CODE_ERROR);
             }
         } else {
-            // 挑战已颁发但用户中途关闭了所有二段方式 —— 让挑战失效以保持一致性。
+            // 挑战已颁发但用户中途关闭了所有虚拟 MFA 设备验证方式 —— 让挑战失效以保持一致性。
             throw new ApiException(BusinessErrorCode.MFA_NOT_ENABLED);
         }
 
@@ -505,9 +509,9 @@ public class LoginServiceImpl implements LoginService {
     }
 
     /**
-     * 解析当前登录方式下应该走的二段类型：
+     * 解析当前登录方式下应该走的虚拟 MFA 设备验证类型：
      * - 优先 TOTP（独立因素，对所有登录方式生效）
-     * - 其次邮箱二段，但仅对密码登录生效（邮箱验证码登录本身已校验邮箱）
+     * - 其次邮箱二次验证，但仅对密码登录生效（邮箱验证码登录本身已校验邮箱）
      */
     private String resolveMfaType(UserSecurity security, String loginMethod) {
         if (security == null) {
@@ -516,7 +520,7 @@ public class LoginServiceImpl implements LoginService {
         if (Integer.valueOf(1).equals(security.getMfaTotpEnabled()) && totpService.isEnabled()) {
             return "totp";
         }
-        SecurityProperties.Account.Mfa mfaConfig = securityProperties.getAccount().getMfa();
+        SystemAccountSecurityProperties.Mfa mfaConfig = accountSecurityProperties.getMfa();
         if ("password".equals(loginMethod)
                 && mfaConfig.getEmail().isEnabled()
                 && Integer.valueOf(1).equals(security.getMfaEmailEnabled())) {
@@ -527,7 +531,7 @@ public class LoginServiceImpl implements LoginService {
 
     private TokenDTO issueMfaChallenge(User user, String mfaType) {
         String challenge = IdUtil.simpleUUID();
-        SecurityProperties.Account.Mfa.Email mfaConfig = securityProperties.getAccount().getMfa().getEmail();
+        SystemAccountSecurityProperties.Mfa.Email mfaConfig = accountSecurityProperties.getMfa().getEmail();
         verificationCodeStore.saveMfaChallenge(challenge, user.getId(), mfaConfig.getChallengeTtlSeconds());
         TokenDTO dto = new TokenDTO();
         dto.setMfaChallenge(challenge);
@@ -568,7 +572,7 @@ public class LoginServiceImpl implements LoginService {
         created.setId(entityIdGenerator.nextId(UserSecurity.class));
         created.setUserId(user.getId());
         created.setLoginMethods(String.join(",",
-                securityProperties.getAccount().getLoginMethods().getDefaults()));
+                accountSecurityProperties.getLoginMethods().getDefaults()));
         created.setMfaEmailEnabled(0);
         created.setMfaTotpEnabled(0);
         created.setDeleted(0);
@@ -577,13 +581,13 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private void ensureLoginMethodAllowed(UserSecurity security, String method) {
-        List<String> enabled = securityProperties.getAccount().getLoginMethods().getEnabled();
+        List<String> enabled = accountSecurityProperties.getLoginMethods().getEnabled();
         if (enabled == null || !enabled.contains(method)) {
             throw new ApiException(BusinessErrorCode.LOGIN_METHOD_DISABLED);
         }
         List<String> stored = parseLoginMethods(security.getLoginMethods());
         if (stored.isEmpty()) {
-            stored = securityProperties.getAccount().getLoginMethods().getDefaults();
+            stored = accountSecurityProperties.getLoginMethods().getDefaults();
         }
         if (!stored.contains(method)) {
             throw new ApiException(BusinessErrorCode.LOGIN_METHOD_DISABLED);
@@ -639,9 +643,9 @@ public class LoginServiceImpl implements LoginService {
         int failCount = user.getLoginFailCount() == null ? 0 : user.getLoginFailCount();
         user.setLoginFailCount(failCount + 1);
 
-        if (failCount + 1 >= securityProperties.getLogin().getMaxFailCount()) {
+        if (failCount + 1 >= authProperties.getLogin().getMaxFailCount()) {
             user.setLoginFailTime(LocalDateTime.now(ZoneOffset.UTC)
-                    .plusMinutes(securityProperties.getLogin().getLockMinutes()));
+                    .plusMinutes(authProperties.getLogin().getLockMinutes()));
         }
 
         userMapper.updateById(user);
@@ -737,7 +741,7 @@ public class LoginServiceImpl implements LoginService {
 
     private String buildMfaCodeContent(String username, String code) {
         return "您好，" + username + "：\n\n"
-                + "您正在通过邮箱二段验证完成登录。\n"
+                + "您正在通过邮箱二次验证完成登录。\n"
                 + "本次验证码为：" + code + "\n"
                 + "验证码 5 分钟内有效，请勿泄露给他人。\n\n"
                 + "如果这不是您的操作，请尽快修改密码。";

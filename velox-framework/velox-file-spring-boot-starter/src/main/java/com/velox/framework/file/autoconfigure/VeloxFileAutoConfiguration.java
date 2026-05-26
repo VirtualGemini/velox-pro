@@ -42,8 +42,8 @@ public class VeloxFileAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(
             prefix = FilePropertyPrefixes.FILE,
-            name = VeloxFileProperties.ENABLED_KEY,
-            havingValue = VeloxFileProperties.ENABLED_TRUE,
+            name = FilePropertyPrefixes.ENABLED,
+            havingValue = FilePropertyPrefixes.TRUE,
             matchIfMissing = true
     )
     public FileClientManager fileClientManager(FileClientTypeRegistry fileClientTypeRegistry) {
@@ -54,8 +54,8 @@ public class VeloxFileAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(
             prefix = FilePropertyPrefixes.FILE,
-            name = VeloxFileProperties.ENABLED_KEY,
-            havingValue = VeloxFileProperties.ENABLED_FALSE
+            name = FilePropertyPrefixes.ENABLED,
+            havingValue = FilePropertyPrefixes.FALSE
     )
     public FileClientManager disabledFileClientManager(FileClientTypeRegistry fileClientTypeRegistry) {
         return new DisabledFileClientManager(fileClientTypeRegistry);

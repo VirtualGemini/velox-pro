@@ -32,8 +32,8 @@ public class VeloxRedisAutoConfiguration {
     @ConditionalOnMissingBean(RedisConnectionFactory.class)
     @ConditionalOnProperty(
             prefix = RedisPropertyPrefixes.REDIS,
-            name = VeloxRedisProperties.ENABLED_KEY,
-            havingValue = VeloxRedisProperties.ENABLED_FALSE
+            name = RedisPropertyPrefixes.ENABLED,
+            havingValue = RedisPropertyPrefixes.FALSE
     )
     public RedisConnectionFactory disabledRedisConnectionFactory() {
         return new DisabledRedisConnectionFactory();
@@ -64,8 +64,8 @@ public class VeloxRedisAutoConfiguration {
     @ConditionalOnMissingBean(value = VeloxRedisManager.class, name = "redisTemplate")
     @ConditionalOnProperty(
             prefix = RedisPropertyPrefixes.REDIS,
-            name = VeloxRedisProperties.ENABLED_KEY,
-            havingValue = VeloxRedisProperties.ENABLED_TRUE,
+            name = RedisPropertyPrefixes.ENABLED,
+            havingValue = RedisPropertyPrefixes.TRUE,
             matchIfMissing = true
     )
     public VeloxRedisManager veloxRedisManager(
@@ -85,8 +85,8 @@ public class VeloxRedisAutoConfiguration {
     @ConditionalOnMissingBean(value = VeloxRedisManager.class, name = "redisTemplate")
     @ConditionalOnProperty(
             prefix = RedisPropertyPrefixes.REDIS,
-            name = VeloxRedisProperties.ENABLED_KEY,
-            havingValue = VeloxRedisProperties.ENABLED_FALSE
+            name = RedisPropertyPrefixes.ENABLED,
+            havingValue = RedisPropertyPrefixes.FALSE
     )
     public VeloxRedisManager disabledVeloxRedisManager(
             RedisSerializer<Object> veloxRedisValueSerializer) {

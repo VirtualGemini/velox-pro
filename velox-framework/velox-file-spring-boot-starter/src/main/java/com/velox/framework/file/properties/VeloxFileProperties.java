@@ -6,10 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = FilePropertyPrefixes.FILE)
 public class VeloxFileProperties {
 
-    public static final String ENABLED_KEY = "enabled";
-    public static final String ENABLED_TRUE = "true";
-    public static final String ENABLED_FALSE = "false";
-
     /**
      * Whether the file capability starter is enabled.
      */

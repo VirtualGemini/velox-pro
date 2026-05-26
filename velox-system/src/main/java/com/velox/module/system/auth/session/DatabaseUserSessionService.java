@@ -2,7 +2,7 @@ package com.velox.module.system.auth.session;
 
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import com.velox.module.system.domain.model.UserSession;
 import com.velox.module.system.persistence.UserSessionMapper;
 import org.springframework.stereotype.Service;
@@ -25,12 +25,12 @@ public class DatabaseUserSessionService implements UserSessionService {
     private static final int NOT_DELETED = 0;
 
     private final UserSessionMapper userSessionMapper;
-    private final SecurityProperties.Login.Presence presenceProperties;
+    private final SystemAuthProperties.Login.Presence presenceProperties;
 
     public DatabaseUserSessionService(UserSessionMapper userSessionMapper,
-                                      SecurityProperties securityProperties) {
+                                      SystemAuthProperties authProperties) {
         this.userSessionMapper = userSessionMapper;
-        this.presenceProperties = securityProperties.getLogin().getPresence();
+        this.presenceProperties = authProperties.getLogin().getPresence();
     }
 
     @Override

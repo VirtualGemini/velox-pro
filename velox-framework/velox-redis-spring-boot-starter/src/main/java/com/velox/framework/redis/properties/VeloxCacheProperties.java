@@ -10,10 +10,6 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(RedisPropertyPrefixes.REDIS_CACHE)
 public class VeloxCacheProperties {
 
-    public static final String ENABLED_KEY = "enabled";
-    public static final String ENABLED_TRUE = "true";
-    public static final String ENABLED_FALSE = "false";
-
     private boolean enabled = true;
     private Integer redisScanBatchSize = 30;
     private String cacheManagerType = RedisAutoConfigurationConstants.DEFAULT_REDIS_CACHE_MANAGER_TYPE;

@@ -7,10 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = RedisPropertyPrefixes.REDIS)
 public class VeloxRedisProperties {
 
-    public static final String ENABLED_KEY = "enabled";
-    public static final String ENABLED_TRUE = "true";
-    public static final String ENABLED_FALSE = "false";
-
     private boolean enabled = true;
     private String templateType = RedisAutoConfigurationConstants.DEFAULT_REDIS_TEMPLATE_TYPE;
 

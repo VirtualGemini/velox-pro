@@ -1,6 +1,6 @@
 package com.velox.module.system.auth.status;
 
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.StringUtils;
 
@@ -17,11 +17,11 @@ public class RedisActiveUserStatusService implements ActiveUserStatusService {
     private static final String PRESENCE_ONLINE = "online";
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final SecurityProperties.Login.Presence presenceProperties;
+    private final SystemAuthProperties.Login.Presence presenceProperties;
 
-    public RedisActiveUserStatusService(StringRedisTemplate stringRedisTemplate, SecurityProperties securityProperties) {
+    public RedisActiveUserStatusService(StringRedisTemplate stringRedisTemplate, SystemAuthProperties authProperties) {
         this.stringRedisTemplate = stringRedisTemplate;
-        this.presenceProperties = securityProperties.getLogin().getPresence();
+        this.presenceProperties = authProperties.getLogin().getPresence();
     }
 
     @Override

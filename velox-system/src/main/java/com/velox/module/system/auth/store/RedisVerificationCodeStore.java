@@ -1,6 +1,6 @@
 package com.velox.module.system.auth.store;
 
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
@@ -53,8 +53,8 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public RedisVerificationCodeStore(StringRedisTemplate stringRedisTemplate, SecurityProperties securityProperties) {
-        super(securityProperties);
+    public RedisVerificationCodeStore(StringRedisTemplate stringRedisTemplate, SystemAuthProperties authProperties) {
+        super(authProperties);
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
@@ -63,7 +63,7 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
         stringRedisTemplate.opsForValue().set(
                 CAPTCHA_PREFIX + key,
                 digest(code),
-                Duration.ofSeconds(securityProperties.getCaptcha().getTtlSeconds())
+                Duration.ofSeconds(authProperties.getCaptcha().getTtlSeconds())
         );
     }
 
@@ -83,8 +83,8 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
                 SAVE_CODE_IF_ALLOWED_SCRIPT,
                 List.of(RESET_PREFIX + email, RESET_SENT_PREFIX + email),
                 digest(code),
-                String.valueOf(securityProperties.getVerification().getResetCodeTtlSeconds()),
-                String.valueOf(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+                String.valueOf(authProperties.getVerification().getResetCodeTtlSeconds()),
+                String.valueOf(authProperties.getVerification().getResetCodeResendIntervalSeconds())
         );
         return Long.valueOf(1L).equals(result);
     }
@@ -110,8 +110,8 @@ public class RedisVerificationCodeStore extends AbstractVerificationCodeStore {
                 SAVE_CODE_IF_ALLOWED_SCRIPT,
                 List.of(LOGIN_CODE_PREFIX + target, LOGIN_CODE_SENT_PREFIX + target),
                 digest(code),
-                String.valueOf(securityProperties.getVerification().getResetCodeTtlSeconds()),
-                String.valueOf(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+                String.valueOf(authProperties.getVerification().getResetCodeTtlSeconds()),
+                String.valueOf(authProperties.getVerification().getResetCodeResendIntervalSeconds())
         );
         return Long.valueOf(1L).equals(result);
     }

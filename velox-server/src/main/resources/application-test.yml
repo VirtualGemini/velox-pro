@@ -38,13 +38,15 @@ velox:
   security:
     # 测试环境可公开 Swagger，便于接口调试
     swagger-public-enabled: true
-    verification:
+  system:
+    auth:
       # 验证码 HMAC 摘要密钥，测试环境建议通过环境变量覆盖
-      secret: ${VERIFICATION_SECRET:change-this-verification-secret}
-      # 邮件重置验证码有效期（秒）
-      reset-code-ttl-seconds: 600
-      # 邮件重置验证码重复发送间隔（秒）
-      reset-code-resend-interval-seconds: 60
+      verification:
+        secret: ${VERIFICATION_SECRET:change-this-verification-secret}
+        # 邮件重置验证码有效期（秒）
+        reset-code-ttl-seconds: 600
+        # 邮件重置验证码重复发送间隔（秒）
+        reset-code-resend-interval-seconds: 60
   redis:
     # 测试环境默认开启 Redis；关闭后验证码和在线状态改为内存实现
     enabled: true

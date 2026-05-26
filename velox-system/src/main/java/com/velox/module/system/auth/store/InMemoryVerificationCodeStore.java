@@ -1,6 +1,6 @@
 package com.velox.module.system.auth.store;
 
-import com.velox.framework.security.properties.SecurityProperties;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 
 import java.time.Duration;
 import java.util.Map;
@@ -19,13 +19,13 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
     private final Object rebindCodeMutex = new Object();
     private final Object mfaCodeMutex = new Object();
 
-    public InMemoryVerificationCodeStore(SecurityProperties securityProperties) {
-        super(securityProperties);
+    public InMemoryVerificationCodeStore(SystemAuthProperties authProperties) {
+        super(authProperties);
     }
 
     @Override
     public void saveCaptcha(String key, String code) {
-        put(CAPTCHA_PREFIX + key, digest(code), Duration.ofSeconds(securityProperties.getCaptcha().getTtlSeconds()));
+        put(CAPTCHA_PREFIX + key, digest(code), Duration.ofSeconds(authProperties.getCaptcha().getTtlSeconds()));
     }
 
     @Override
@@ -49,12 +49,12 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
             put(
                     RESET_PREFIX + email,
                     digest(code),
-                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeTtlSeconds())
+                    Duration.ofSeconds(authProperties.getVerification().getResetCodeTtlSeconds())
             );
             put(
                     RESET_SENT_PREFIX + email,
                     "1",
-                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+                    Duration.ofSeconds(authProperties.getVerification().getResetCodeResendIntervalSeconds())
             );
             return true;
         }
@@ -88,12 +88,12 @@ public class InMemoryVerificationCodeStore extends AbstractVerificationCodeStore
             put(
                     LOGIN_CODE_PREFIX + target,
                     digest(code),
-                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeTtlSeconds())
+                    Duration.ofSeconds(authProperties.getVerification().getResetCodeTtlSeconds())
             );
             put(
                     LOGIN_CODE_SENT_PREFIX + target,
                     "1",
-                    Duration.ofSeconds(securityProperties.getVerification().getResetCodeResendIntervalSeconds())
+                    Duration.ofSeconds(authProperties.getVerification().getResetCodeResendIntervalSeconds())
             );
             return true;
         }

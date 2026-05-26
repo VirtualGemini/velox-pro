@@ -50,7 +50,7 @@ public interface VerificationCodeStore {
     boolean mfaCodeExists(String userId);
 
     /**
-     * 登录第一段完成后下发的临时挑战令牌 -> userId；二段确认时一次性消费。
+     * 登录第一段完成后下发的临时挑战令牌 -> userId；虚拟 MFA 设备验证时一次性消费。
      */
     void saveMfaChallenge(String challengeToken, String userId, int ttlSeconds);
 

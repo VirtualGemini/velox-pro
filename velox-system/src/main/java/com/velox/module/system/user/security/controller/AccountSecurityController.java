@@ -87,7 +87,7 @@ public class AccountSecurityController {
         return Result.ok();
     }
 
-    @Operation(summary = "开启或关闭邮箱二段验证")
+    @Operation(summary = "开启或关闭邮箱二次验证")
     @PutMapping("/mfa/email")
     @RequirePermission("system:user-center:mfa-update")
     public Result<Boolean> updateMfaEmail(@Valid @RequestBody MfaEmailUpdateCommand command) {

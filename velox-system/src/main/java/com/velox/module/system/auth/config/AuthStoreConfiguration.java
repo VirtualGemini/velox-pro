@@ -1,6 +1,7 @@
 package com.velox.module.system.auth.config;
 
 import com.velox.framework.redis.common.prefix.RedisPropertyPrefixes;
+import com.velox.module.system.auth.properties.SystemAuthProperties;
 import com.velox.module.system.auth.session.UserSessionService;
 import com.velox.module.system.auth.status.ActiveUserStatusService;
 import com.velox.module.system.auth.store.InMemoryVerificationCodeStore;
@@ -50,15 +51,15 @@ public class AuthStoreConfiguration {
     @ConditionalOnMissingBean(VerificationCodeStore.class)
     @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "true", matchIfMissing = true)
     public VerificationCodeStore redisVerificationCodeStore(StringRedisTemplate stringRedisTemplate,
-                                                            com.velox.framework.security.properties.SecurityProperties securityProperties) {
-        return new RedisVerificationCodeStore(stringRedisTemplate, securityProperties);
+                                                            SystemAuthProperties authProperties) {
+        return new RedisVerificationCodeStore(stringRedisTemplate, authProperties);
     }
 
     @Bean
     @ConditionalOnMissingBean(VerificationCodeStore.class)
     @ConditionalOnProperty(prefix = RedisPropertyPrefixes.REDIS, name = "enabled", havingValue = "false")
     public VerificationCodeStore inMemoryVerificationCodeStore(
-            com.velox.framework.security.properties.SecurityProperties securityProperties) {
-        return new InMemoryVerificationCodeStore(securityProperties);
+            SystemAuthProperties authProperties) {
+        return new InMemoryVerificationCodeStore(authProperties);
     }
 }
